@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DCS Manager</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1d6fa5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DCS Manager">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f7f9;--card:#fff;--tx:#1b2430;--mut:#6b7684;--bd:#dde2e8;--pri:#1d6fa5;--ok:#1f8f4e;--wa:#d98a00;--ko:#cc3b3b;--okb:#e3f4ea;--wab:#fdf1d9;--kob:#fbe4e4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#14181e;--card:#1c222b;--tx:#e6eaf0;--mut:#98a2b0;--bd:#2d3643;--pri:#5aaee6;--ok:#4cc27f;--wa:#e9b04a;--ko:#ef7a7a;--okb:#16301f;--wab:#3a2e12;--kob:#3b1c1c}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--pri);color:#fff;padding:14px 16px}header h1{margin:0;font-size:18px}header p{margin:2px 0 0;font-size:12px;opacity:.9}
+nav{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd)}
+nav button{border:0;background:none;color:var(--mut);padding:8px 12px;border-radius:8px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--pri);color:#fff}
+main{max-width:1000px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:16px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:7px 9px;min-width:0}
+button.b{background:var(--pri);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+button.b.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{border-radius:12px;padding:12px;border:1px solid var(--bd);background:var(--card)}
+.kpi small{color:var(--mut);display:block}.kpi b{font-size:26px}.kpi span{font-size:11px;color:var(--mut)}
+.kpi.ok{background:var(--okb)}.kpi.wa{background:var(--wab)}.kpi.ko{background:var(--kob)}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+th{color:var(--mut);font-weight:600}
+.t.ok{color:var(--ok);font-weight:600}.t.wa{color:var(--wa);font-weight:600}.t.ko{color:var(--ko);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--wab);color:var(--wa)}.tag.v{background:var(--okb);color:var(--ok)}
+.al{padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13px;border-left:4px solid}.al.ko{background:var(--kob);border-color:var(--ko)}.al.wa{background:var(--wab);border-color:var(--wa)}.msg{font-size:13px;margin-top:8px;color:var(--wa)}.note{font-size:12px;color:var(--mut)}
+svg text{fill:var(--mut);font-size:10px}
+@media print{:root{--bg:#fff!important;--card:#fff!important;--tx:#000!important;--mut:#444!important;--bd:#bbb!important;--ok:#146c38!important;--wa:#9a6200!important;--ko:#a42424!important;--okb:#fff!important;--wab:#fff!important;--kob:#fff!important}
+header,nav,.np{display:none!important}body{background:#fff}main{max-width:none;padding:0}.card{break-inside:avoid;border-radius:0}.sc{overflow:visible}}
+#btn-install{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:50;display:none;background:var(--pri);color:#fff;border:0;border-radius:24px;padding:10px 16px;font:600 14px system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer}
+@media print{#btn-install{display:none!important}}
+</style>
+</head>
+<body>
+<header><h1>DCS manager</h1><p>Version complète · Tableau de bord · PEV · SMI · Paludisme · Surveillance · Stocks · Supervision · Rapports</p></header>
+<nav id="nav"></nav>
+<main id="app"></main>
+<script>
+/* ===== 1. CONFIGURATION : un programme = un formulaire + des indicateurs (SMI et paludisme sont des variantes du PEV) ===== */
+var PROGS=[
+{id:"pev",label:"PEV",form:[["dtc1","DTC1"],["dtc3","DTC3"],["var","VAR"],["vpo3","VPO3"]],checks:[["dtc3","dtc1","DTC3 supérieur à DTC1"]]},
+{id:"smi",label:"SMI",form:[["cpn1","CPN1"],["cpn4","CPN4"],["acc_tot","Accouchements"],["acc_ass","Accouchements assistés"],["cpon","Consultations postnatales"],["pf","Nouvelles utilisatrices PF"]],
+ checks:[["cpn4","cpn1","CPN4 supérieur à CPN1"],["acc_ass","acc_tot","Accouchements assistés supérieurs aux accouchements"]]},
+{id:"palu",label:"Paludisme",form:[["suspects","Cas suspects"],["testes","Cas testés (TDR/GE)"],["positifs","Cas confirmés"],["graves","Cas graves"],["deces","Décès"]],
+ checks:[["testes","suspects","Cas testés supérieurs aux suspects"],["positifs","testes","Cas confirmés supérieurs aux testés"],["graves","positifs","Cas graves supérieurs aux confirmés"],["deces","positifs","Décès supérieurs aux cas confirmés"]]}];
+var POPF=[["u1","Enfants < 1 an (naissances attendues)"],["gross","Grossesses attendues"],["far","Femmes en âge de procréer"],["tot","Population totale"]];
+/* C(programme, id, libellé, numérateur, dénominateur (clé de population ou fonction), sens, objectif, seuil d'alerte, centre en difficulté si rouge, multiplicateur)
+   Seuils PROVISOIRES : à remplacer par les critères de la direction. dir "info" = suivi sans couleur. */
+function C(p,id,l,n,d,dir,t,w,fl,m){return{p:p,id:id,label:l,num:n,d:d,dir:dir,target:t,warn:w,flag:fl,mult:m||100}}
+var INDICATORS=[
+C("pev","dtc1","Couverture DTC1",s=>s.dtc1,"u1","up",90,80,0),
+C("pev","dtc3","Couverture DTC3",s=>s.dtc3,"u1","up",90,80,1),
+C("pev","var","Couverture VAR",s=>s["var"],"u1","up",90,80,1),
+C("pev","vpo3","Couverture VPO3",s=>s.vpo3,"u1","up",90,80,0),
+C("pev","drop","Abandon DTC1–DTC3",s=>s.dtc1-s.dtc3,s=>s.dtc1,"down",10,20,1),
+C("smi","cpn1","CPN1 (% des grossesses attendues)",s=>s.cpn1,"gross","up",90,80,1),
+C("smi","cpn4","CPN4 (% des grossesses attendues)",s=>s.cpn4,"gross","up",60,40,1),
+C("smi","accass","Accouchements assistés",s=>s.acc_ass,"u1","up",80,60,1),
+C("smi","cpon","Consultations postnatales",s=>s.cpon,"u1","up",60,40,0),
+C("smi","pf","Nouvelles utilisatrices PF (% des FAR)",s=>s.pf,"far","info",null,null,0),
+C("palu","teste","Cas suspects testés",s=>s.testes,s=>s.suspects,"up",95,80,1),
+C("palu","posit","Taux de positivité",s=>s.positifs,s=>s.testes,"info",null,null,0),
+C("palu","grav","Proportion de cas graves",s=>s.graves,s=>s.positifs,"info",null,null,0),
+C("palu","letal","Létalité (décès / cas confirmés)",s=>s.deces,s=>s.positifs,"down",1,3,1),
+C("palu","letalg","Létalité des cas graves",s=>s.deces,s=>s.graves,"info",null,null,0),
+C("palu","inc","Incidence (cas confirmés pour 1 000 hab.)",s=>s.positifs,"tot","info",null,null,0,1000)];
+var MOIS=["Janv","Févr","Mars","Avr","Mai","Juin","Juil","Août","Sept","Oct","Nov","Déc"];
+var KEY="dcs_etape6_v1",S;
+function load(){try{S=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem("dcs_etape5_v1")||localStorage.getItem("dcs_etape4_v1")||localStorage.getItem("dcs_etape3_v1")||localStorage.getItem("dcs_etape2_v1"))}catch(e){S=null}
+ if(S){S.notif=S.notif||[];S.inv=S.inv||[];S.mv=S.mv||[];S.prod=S.prod||defProds();S.sup=S.sup||[];S.reco=S.reco||[];S.hist=S.hist||[];S.rh=S.rh||[];S.eq=S.eq||{};S.infra=S.infra||{}}
+ if(!S){S={centres:[{id:"c1",nom:"CS Kipé",commune:"Ratoma"},{id:"c2",nom:"CS Dar-es-Salam",commune:"Ratoma"},{id:"c3",nom:"CS Hamdallaye",commune:"Ratoma"},{id:"c4",nom:"CS Nongo",commune:"Ratoma"},{id:"c5",nom:"CS Taouyah",commune:"Ratoma"},{id:"c6",nom:"CS Sonfonia",commune:"Ratoma"}],pop:{},rec:{},camp:[],notif:[],inv:[],mv:[],prod:defProds(),sup:[],reco:[],hist:[],rh:[],eq:{},infra:{}};
+  var b={c1:1500,c2:1100,c3:1300,c4:900,c5:1000,c6:800};
+  S.centres.forEach(c=>{var u=b[c.id];S.pop[c.id+"|2026"]={u1:u,gross:Math.round(u*1.05),far:Math.round(u*6.5),tot:u*28}})}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+var UI={tab:"dash",year:2026,m1:1,m2:10,commune:"",onlyVal:true,ind:"dtc3",pp:"pev",sp:"pev",dp:"all",dprog:"all",msg:""};
+
+/* ===== 2. MOTEUR D'INDICATEURS (commun aux trois programmes) ===== */
+function PROG(id){return PROGS.filter(p=>p.id===id)[0]}
+function ind(id){return INDICATORS.filter(i=>i.id===id)[0]}
+function INDS(p){return INDICATORS.filter(i=>i.p===p)}
+function scope(){return S.centres.filter(c=>!UI.commune||c.commune===UI.commune)}
+function rk(p,c,y,m){return p+"|"+c+"|"+y+"-"+(m<10?"0":"")+m}
+function aggregate(pid,cs,y,m1,m2,ov){var P=PROG(pid),s={},pop={u1:0,gross:0,far:0,tot:0},n=0;P.form.forEach(f=>s[f[0]]=0);
+ cs.forEach(c=>{var pp=S.pop[c.id+"|"+y]||{};for(var k in pop)pop[k]+=(pp[k]||0)*(m2-m1+1)/12;
+  for(var m=m1;m<=m2;m++){var r=S.rec[rk(pid,c.id,y,m)];if(r&&(!ov||r.status==="valide")){n++;P.form.forEach(f=>s[f[0]]+=Number(r.values[f[0]])||0)}}});
+ return{s:s,pop:pop,n:n}}
+function compute(i,a){var d=typeof i.d==="string"?a.pop[i.d]:i.d(a.s);return d?i.num(a.s)/d*i.mult:null}
+function status(i,v){if(v===null||i.dir==="info")return "";if(i.dir==="down")return v<=i.target?"ok":v<=i.warn?"wa":"ko";return v>=i.target?"ok":v>=i.warn?"wa":"ko"}
+function fmt(i,v){if(arguments.length===1){v=i;i=null}if(v===null)return "–";return v.toFixed(1)+(i&&i.mult===1000?" ‰":" %")}
+function tgt(i){return i.dir==="info"?"indicateur de suivi":(i.dir==="up"?"objectif ≥ ":"objectif ≤ ")+i.target+(i.mult===1000?" ‰":" %")}
+function received(pid,c){var n=0;for(var m=UI.m1;m<=UI.m2;m++){var r=S.rec[rk(pid,c.id,UI.year,m)];if(r&&r.status==="valide")n++}return n}
+function checks(pid,v){return PROG(pid).checks.filter(k=>(+v[k[0]]||0)>(+v[k[1]]||0)).map(k=>k[2])}
+/* Centres en difficulté : indicateurs rouges marqués « flag » + rapports validés manquants */
+function difficulties(pf){var out=[],E=UI.m2-UI.m1+1;
+ scope().forEach(c=>{var f=[],sc=null;
+  PROGS.filter(P=>pf==="all"||P.id===pf).forEach(P=>{var a=aggregate(P.id,[c],UI.year,UI.m1,UI.m2,UI.onlyVal);
+   INDS(P.id).forEach(i=>{if(!i.flag)return;var v=compute(i,a);if(status(i,v)==="ko"){f.push(P.label+" · "+i.label.replace("Couverture ","").replace(/ \(.*\)/,"")+" "+fmt(i,v));if(i.id==="dtc3")sc=v}});
+   var rc=received(P.id,c);if(rc<E)f.push("Rapports "+P.label+" validés : "+rc+"/"+E)});
+  if(f.length)out.push({c:c,f:f,sc:sc===null?999:sc})});
+ return out.sort((a,b)=>b.f.length-a.f.length||a.sc-b.sc)}
+function campStats(list){var t={cible:0,vac:0,sp:0,sr:0};list.forEach(function(k){t.cible+=+k.cible||0;t.vac+=+k.vac||0;t.sp+=+k.sp||0;t.sr+=+k.sr||0});return t}
+function campScope(){return S.camp.filter(function(k){var c=S.centres.filter(function(x){return x.id===k.centre})[0];return k.date&&k.date.slice(0,4)==UI.year&&(!UI.commune||(c&&c.commune===UI.commune))})}
+
+
+/* ===== 3. INTERFACE ===== */
+var TABS=[["dash","Tableau de bord"],["saisie","Saisie mensuelle"],["camp","Campagnes & AV"],["diff","Centres en difficulté"],["surv","Surveillance"],["inv","Investigations"],["stock","Stocks"],["mouv","Mouvements"],["sup","Supervision"],["reco","Recommandations"],["rh","RH & infrastructures"],["rap","Rapports"],["donnees","Données & validation"],["param","Centres & populations"]];
+function nav(){document.getElementById("nav").innerHTML=TABS.map(x=>'<button data-t="'+x[0]+'" class="'+(UI.tab===x[0]?"on":"")+'">'+x[1]+'</button>').join("");
+ [].forEach.call(document.querySelectorAll("#nav button"),b=>{b.onclick=()=>{UI.tab=b.dataset.t;UI.msg="";UI.gid=null;UI.vid=null;UI.hv=null;render()}})}
+function render(){nav();document.getElementById("app").innerHTML=({dash:vDash,saisie:vSaisie,camp:vCamp,diff:vDiff,surv:vSurv,inv:vInv,stock:vStock,mouv:vMouv,sup:vSup,reco:vReco,rap:vRap,rh:vRh,donnees:vDonnees,param:vParam})[UI.tab]();bind()}
+function filters(){
+ var cm=[];S.centres.forEach(function(c){if(cm.indexOf(c.commune)<0)cm.push(c.commune)});
+ var mo=function(sel){return MOIS.map(function(m,i){return '<option value="'+(i+1)+'"'+(sel===i+1?" selected":"")+'>'+m+'</option>'}).join("")};
+ return '<div class="card"><div class="row"><label>Année<input id="f_year" type="number" value="'+UI.year+'" style="width:90px"></label>'+
+ '<label>Du mois<select id="f_m1">'+mo(UI.m1)+'</select></label><label>Au mois<select id="f_m2">'+mo(UI.m2)+'</select></label>'+
+ '<label>Commune<select id="f_d"><option value="">Toutes</option>'+cm.map(function(d){return '<option'+(UI.commune===d?" selected":"")+'>'+d+'</option>'}).join("")+'</select></label>'+
+ '<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="f_v"'+(UI.onlyVal?" checked":"")+'> Données validées seulement</label></div></div>';
+}
+function progSel(id,v,all){return '<label>Programme<select id="'+id+'">'+(all?'<option value="all">Tous</option>':"")+PROGS.map(p=>'<option value="'+p.id+'"'+(v===p.id?" selected":"")+'>'+p.label+'</option>').join("")+'</select></label>'}
+function vDash5(){
+ var cs=scope(),D=difficulties("all"),h=filters();
+ h+='<div class="card"><h2>Situation sanitaire de la commune'+(UI.commune?" de "+UI.commune:"")+'</h2><p class="note" style="margin:0">'+cs.length+' centre(s) · '+D.length+' en difficulté · seuils provisoires, modifiables dans la configuration</p></div>';
+ PROGS.forEach(P=>{var a=aggregate(P.id,cs,UI.year,UI.m1,UI.m2,UI.onlyVal);
+  h+='<div class="card"><h2>'+P.label+'</h2><p class="note" style="margin:0 0 8px">'+a.n+' rapport(s) mensuel(s) pris en compte</p><div class="kpis" style="margin:0">'+
+  INDS(P.id).map(i=>{var v=compute(i,a);return '<div class="kpi '+status(i,v)+'"><small>'+i.label+'</small><b>'+fmt(i,v)+'</b><span>'+tgt(i)+'</span></div>'}).join("")+'</div></div>'});
+ h+=survCard()+stockCard()+supCard()+rhCard();var A=D.map(x=>({k:x.f.length>=2?"ko":"wa",t:"<b>"+x.c.nom+"</b> : "+x.f.join(" · ")})),cp=campStats(campScope());survAlerts().forEach(x=>A.push(x));stockAlerts().forEach(x=>A.push(x));supAlerts().forEach(x=>A.push(x));rhAlerts().forEach(x=>A.push(x));
+ if(cp.cible&&cp.vac/cp.cible*100<80)A.push({k:"wa",t:"<b>Campagnes / AV</b> : réalisation "+(cp.vac/cp.cible*100).toFixed(0)+" % de la cible (< 80)"});
+ A.sort((x,y)=>(x.k==="ko"?0:1)-(y.k==="ko"?0:1));
+ h+='<div class="card"><h2>Alertes et problèmes prioritaires</h2>'+(A.length?A.slice(0,8).map(x=>'<div class="al '+x.k+'">'+x.t+'</div>').join("")+(A.length>8?'<p class="note">+ '+(A.length-8)+' autre(s) dans « Centres en difficulté ».</p>':""):'<p class="note">Aucune alerte sur la période. Les alertes de surveillance et de stocks s’ajouteront aux étapes 3 et 4.</p>')+'</div>';
+ var P=PROG(UI.pp),I=INDS(P.id),at=aggregate(P.id,cs,UI.year,UI.m1,UI.m2,UI.onlyVal);
+ h+='<div class="card"><h2>Performances des centres de santé</h2><div class="row" style="margin-bottom:8px">'+progSel("f_pp",UI.pp)+'</div><div class="sc"><table><tr><th>Centre</th>'+I.map(i=>'<th title="'+i.label+'">'+i.label.replace("Couverture ","").replace(/ \(.*\)/,"")+'</th>').join("")+'</tr>'+
+ cs.map(c=>{var ca=aggregate(P.id,[c],UI.year,UI.m1,UI.m2,UI.onlyVal);return '<tr><td>'+c.nom+'</td>'+I.map(i=>{var v=compute(i,ca);return '<td class="t '+status(i,v)+'">'+fmt(i,v)+'</td>'}).join("")+'</tr>'}).join("")+
+ '<tr style="font-weight:700"><td>Commune</td>'+I.map(i=>{var v=compute(i,at);return '<td class="t '+status(i,v)+'">'+fmt(i,v)+'</td>'}).join("")+'</tr></table></div><p class="note">Couleurs : vert = objectif atteint, orange = sous l’objectif, rouge = sous le seuil d’alerte. Les indicateurs « de suivi » n’ont pas de couleur.</p></div>';
+ h+='<div class="card"><h2>Évolution mensuelle '+UI.year+'</h2><label style="margin-bottom:8px;max-width:340px">Indicateur<select id="f_i">'+PROGS.map(p=>'<optgroup label="'+p.label+'">'+INDS(p.id).map(i=>'<option value="'+i.id+'"'+(UI.ind===i.id?" selected":"")+'>'+i.label+'</option>').join("")+'</optgroup>').join("")+'</select></label>'+trend(cs)+'</div>';
+ return h}
+function trend(cs){var I=ind(UI.ind),pts=[],W=640,H=200,L=34,B=24,T=10;
+ for(var m=1;m<=12;m++){var a=aggregate(I.p,cs,UI.year,m,m,UI.onlyVal);pts.push(a.n?compute(I,a):null)}
+ var mx=Math.max(10,(I.target||0),Math.max.apply(null,pts.map(v=>v||0)))*1.1,u=I.mult===1000?"‰":"%";
+ var x=i=>L+i*(W-L-10)/11,y=v=>T+(H-T-B)*(1-v/mx);
+ var s='<div class="sc"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:480px">';
+ [0,I.target,Math.round(mx)].forEach(g=>{if(g===null)return;s+='<line x1="'+L+'" x2="'+(W-10)+'" y1="'+y(g)+'" y2="'+y(g)+'" stroke="'+(g===I.target?"#1f8f4e":"#8884")+'" stroke-dasharray="'+(g===I.target?"4 3":"0")+'"/><text x="2" y="'+(y(g)+3)+'">'+g+u+'</text>'});
+ var d="",pen=false;pts.forEach((v,i)=>{if(v===null){pen=false;return}d+=(pen?"L":"M")+x(i)+" "+y(v)+" ";pen=true});
+ s+='<path d="'+d+'" fill="none" stroke="#1d6fa5" stroke-width="2.5"/>';
+ pts.forEach((v,i)=>{s+='<text x="'+(x(i)-9)+'" y="'+(H-8)+'">'+MOIS[i]+'</text>';if(v!==null)s+='<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3.5" fill="#1d6fa5"/>'});
+ return s+'</svg></div>'}
+function vSaisie(){var P=PROG(UI.sp),now=new Date(),dm=now.getFullYear()+"-"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1);
+ return '<div class="card"><h2>Saisie mensuelle</h2><div class="row">'+progSel("s_pg",UI.sp)+'<label>Centre<select id="s_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+c.nom+'</option>').join("")+'</select></label><label>Mois<input type="month" id="s_p" value="'+(UI.lastP||dm)+'"></label></div>'+
+ '<div class="grid" style="margin-top:12px">'+P.form.map(f=>'<label>'+f[1]+'<input type="number" min="0" inputmode="numeric" id="v_'+f[0]+'"></label>').join("")+'</div>'+
+ '<div class="row" style="margin-top:12px"><button class="b s" id="s_draft">Enregistrer brouillon</button><button class="b" id="s_val">Enregistrer et valider</button></div><div class="msg" id="s_msg">'+UI.msg+'</div>'+
+ '<p class="note">Contrôles à la validation : '+P.checks.map(k=>k[2].toLowerCase()).join(" ; ")+'. Un rapport existant est chargé puis remplacé.</p></div>'}
+function vCamp(){
+ var L=campScope(),t=campStats(L),pc=function(a,b){return b?(a/b*100).toFixed(0)+" %":"–"};
+ var h=filters()+'<div class="card"><h2>Nouvelle campagne ou activité avancée</h2><div class="row">'+
+ '<label>Type<select id="k_type"><option value="campagne">Campagne</option><option value="avancee">Activité avancée</option></select></label>'+
+ '<label>Intitulé<input id="k_nom" placeholder="ex. Riposte rougeole"></label><label>Date<input type="date" id="k_date"></label>'+
+ '<label>Centre<select id="k_c">'+S.centres.map(function(c){return '<option value="'+c.id+'">'+c.nom+'</option>'}).join("")+'</select></label>'+
+ '<label>Cible<input type="number" id="k_cible" style="width:90px"></label><label>Vaccinés<input type="number" id="k_vac" style="width:90px"></label>'+
+ '<label>Séances prévues<input type="number" id="k_sp" style="width:90px"></label><label>Séances réalisées<input type="number" id="k_sr" style="width:90px"></label>'+
+ '<button class="b" id="k_add">Ajouter</button></div><div class="msg">'+UI.msg+'</div></div>'+
+ '<div class="card"><h2>Suivi '+UI.year+'</h2><p class="note" style="margin:0 0 8px">Couverture de la cible : <b>'+pc(t.vac,t.cible)+'</b> · séances réalisées : <b>'+pc(t.sr,t.sp)+'</b> ('+L.length+' activité(s))</p>'+
+ (L.length?'<div class="sc"><table><tr><th>Date</th><th>Type</th><th>Intitulé</th><th>Centre</th><th>Cible</th><th>Vaccinés</th><th>Couv.</th><th>Séances</th><th></th></tr>'+
+ L.slice().sort(function(a,b){return a.date<b.date?1:-1}).map(function(k){var c=S.centres.filter(function(x){return x.id===k.centre})[0],r=k.cible?k.vac/k.cible*100:null;
+  return '<tr><td>'+k.date+'</td><td>'+(k.type==="campagne"?"Campagne":"Activité avancée")+'</td><td>'+k.nom+'</td><td>'+(c?c.nom:"")+'</td><td>'+k.cible+'</td><td>'+k.vac+'</td><td class="t '+(r===null?"":r>=90?"ok":r>=80?"wa":"ko")+'">'+fmt(r)+'</td><td>'+k.sr+'/'+k.sp+'</td><td><button class="b s" data-del="'+k.id+'">Suppr.</button></td></tr>'}).join("")+'</table></div>':'<p class="note">Aucune activité enregistrée pour ce filtre.</p>')+'</div>';
+ return h;
+}
+function vDiff(){var D=difficulties(UI.dprog),h=filters()+'<div class="card"><h2>Centres en difficulté</h2><div class="row" style="margin-bottom:8px">'+progSel("d_pg",UI.dprog,true)+'</div><p class="note" style="margin:0 0 10px">Critères : indicateurs marqués « rouge » (couverture sous le seuil d’alerte, abandon ou létalité au-dessus) et rapports validés manquants. Classement : nombre de problèmes, puis DTC3 croissant.</p>';
+ if(!D.length)return h+'<p class="note">Aucun centre en difficulté sur la période.</p></div>';
+ return h+'<div class="sc"><table><tr><th>Centre</th><th>Priorité</th><th style="text-align:left">Problèmes</th></tr>'+D.map(x=>'<tr><td>'+x.c.nom+'</td><td><span class="tag" style="'+(x.f.length>=2?"background:var(--kob);color:var(--ko)":"")+'">'+(x.f.length>=2?"Haute":"Moyenne")+'</span></td><td style="text-align:left;white-space:normal">'+x.f.join(" · ")+'</td></tr>').join("")+'</table></div></div>'}
+function vDonnees(){var P=UI.dp==="all"?null:PROG(UI.dp),keys=Object.keys(S.rec).filter(k=>!P||k.split("|")[0]===P.id).sort((a,b)=>a.split("|")[2]<b.split("|")[2]?1:-1),h='<div class="card"><h2>Rapports mensuels</h2><div class="row" style="margin-bottom:8px">'+progSel("d_p",UI.dp,true)+'</div>';
+ if(!keys.length)return h+'<p class="note">Aucun rapport. Saisissez-en un ou générez une démonstration dans « Centres & populations ».</p></div>';
+ return h+'<div class="sc"><table><tr><th>Mois</th><th>Prog.</th><th>Centre</th><th style="text-align:left">Valeurs</th><th>Statut</th><th></th></tr>'+keys.slice(0,60).map(k=>{var p=k.split("|"),r=S.rec[k],c=S.centres.filter(x=>x.id===p[1])[0],pg=PROG(p[0]);
+  return '<tr><td>'+p[2]+'</td><td>'+pg.label+'</td><td>'+(c?c.nom:p[1])+'</td><td style="text-align:left">'+pg.form.map(f=>f[0]+" "+r.values[f[0]]).join(" · ")+'</td><td><span class="tag '+(r.status==="valide"?"v":"")+'">'+(r.status==="valide"?"validé":"brouillon")+'</span></td><td>'+(r.status==="valide"?'<button class="b s" data-act="unv" data-k="'+k+'">Rouvrir</button>':'<button class="b" data-act="val" data-k="'+k+'">Valider</button>')+'</td></tr>'}).join("")+'</table></div><p class="note">60 derniers rapports. Seuls les rapports validés alimentent le tableau de bord par défaut.</p></div>'}
+function vParam(){var yr=UI.year;
+ return '<div class="card"><h2>Centres et populations cibles</h2><p class="note">Données du Module 8 (Phase 0) : ici un exemple modifiable. Chaque programme utilise sa cible : PEV et accouchements → enfants < 1 an, CPN → grossesses, PF → FAR, paludisme → population totale.</p><div class="row" style="margin-bottom:10px"><label>Année<input id="p_year" type="number" value="'+yr+'" style="width:90px"></label></div>'+
+ '<div class="sc"><table><tr><th>Centre</th>'+POPF.map(f=>'<th>'+f[1]+'</th>').join("")+'</tr>'+S.centres.map(c=>'<tr><td>'+c.nom+'</td>'+POPF.map(f=>'<td><input type="number" class="pp" data-c="'+c.id+'" data-k="'+f[0]+'" value="'+((S.pop[c.id+"|"+yr]||{})[f[0]]||"")+'" style="width:90px;text-align:right"></td>').join("")+'</tr>').join("")+'</table></div>'+
+ '<div class="row" style="margin-top:12px"><button class="b" id="p_save">Enregistrer</button><button class="b s" id="p_seed">Générer données de démonstration</button><button class="b s" id="p_reset">Tout effacer</button></div><div class="msg">'+UI.msg+'</div></div>'}
+function bind(){var g=i=>document.getElementById(i),on=(i,f)=>{if(g(i))g(i).onchange=f};
+ if(g("f_year"))["f_year","f_m1","f_m2","f_d","f_v"].forEach(i=>on(i,()=>{UI.year=+g("f_year").value||UI.year;UI.m1=+g("f_m1").value;UI.m2=+g("f_m2").value;UI.commune=g("f_d").value;UI.onlyVal=g("f_v").checked;if(UI.m2<UI.m1)UI.m2=UI.m1;render()}));
+ on("f_i",()=>{UI.ind=g("f_i").value;render()});on("f_pp",()=>{UI.pp=g("f_pp").value;render()});on("d_pg",()=>{UI.dprog=g("d_pg").value;render()});on("d_p",()=>{UI.dp=g("d_p").value;render()});
+ survBind(g,on);stockBind(g,on);supBind(g,on);rapBind(g,on);rhBind(g,on);
+ if(UI.tab==="saisie"){on("s_pg",()=>{UI.sp=g("s_pg").value;UI.lastP=g("s_p").value;render()});var P=PROG(UI.sp);
+  var fill=()=>{var r=S.rec[rk(P.id,g("s_c").value,+g("s_p").value.slice(0,4),+g("s_p").value.slice(5))];P.form.forEach(f=>g("v_"+f[0]).value=r?r.values[f[0]]:"")};
+  g("s_c").onchange=fill;g("s_p").onchange=fill;fill();
+  var put=st=>{var v={};P.form.forEach(f=>v[f[0]]=g("v_"+f[0]).value===""?0:Number(g("v_"+f[0]).value));if(!g("s_p").value){g("s_msg").textContent="Choisissez un mois.";return}
+   var w=checks(P.id,v);if(st==="valide"&&w.length){g("s_msg").textContent="Incohérence : "+w.join(" ; ")+".";return}
+   S.rec[P.id+"|"+g("s_c").value+"|"+g("s_p").value]={values:v,status:st,at:Date.now()};save();UI.lastP=g("s_p").value;UI.msg="Rapport "+P.label+" enregistré ("+(st==="valide"?"validé":"brouillon")+").";render()};
+  g("s_draft").onclick=()=>put("brouillon");g("s_val").onclick=()=>put("valide")}
+ if(UI.tab==="camp"){g("k_add").onclick=()=>{var k={id:"k"+Date.now(),type:g("k_type").value,nom:g("k_nom").value||"Sans titre",date:g("k_date").value,centre:g("k_c").value,cible:+g("k_cible").value||0,vac:+g("k_vac").value||0,sp:+g("k_sp").value||0,sr:+g("k_sr").value||0};
+   if(!k.date){UI.msg="Indiquez une date.";render();return}if(k.cible&&k.vac>k.cible){UI.msg="Vaccinés supérieurs à la cible : vérifiez.";render();return}S.camp.push(k);save();UI.msg="Activité ajoutée.";render()};
+  [].forEach.call(document.querySelectorAll("[data-del]"),b=>{b.onclick=()=>{S.camp=S.camp.filter(k=>k.id!==b.dataset.del);save();render()}})}
+ if(UI.tab==="donnees")[].forEach.call(document.querySelectorAll("[data-act]"),b=>{b.onclick=()=>{var r=S.rec[b.dataset.k];if(b.dataset.act==="val"){var w=checks(b.dataset.k.split("|")[0],r.values);if(w.length){alert("Incohérence : "+w.join(" ; "));return}r.status="valide"}else r.status="brouillon";save();render()}});
+ if(UI.tab==="param"){on("p_year",()=>{UI.year=+g("p_year").value||UI.year;render()});
+  g("p_save").onclick=()=>{[].forEach.call(document.querySelectorAll(".pp"),i=>{var k=i.dataset.c+"|"+UI.year;S.pop[k]=S.pop[k]||{};S.pop[k][i.dataset.k]=Number(i.value)||0});save();UI.msg="Populations enregistrées.";render()};
+  g("p_seed").onclick=()=>{var q={c1:1,c2:.92,c3:.78,c4:.88,c5:.7,c6:.95},R=()=>.9+Math.random()*.2;
+   S.centres.forEach(c=>{var p=S.pop[c.id+"|"+UI.year]||{u1:1000,gross:1050,far:6500,tot:28000},k=q[c.id]||.9,f=(x)=>Math.round(x*R());
+    for(var m=1;m<=10;m++){if(c.id==="c5"&&m>8)continue;var u=p.u1/12,gr=p.gross/12,fa=p.far/12,tt=p.tot/12,d1=f(u*(1.05*k+.05)),d3=Math.min(d1,f(u*.95*k)),c1=f(gr*.95*k),ac=f(u*.88*k),sus=f(tt*.05),te=Math.min(sus,f(sus*(.8+.18*k))),po=Math.round(te*(.4+.1*R())),gv=Math.round(po*.06*R()),
+     rec=(pid,v)=>S.rec[rk(pid,c.id,UI.year,m)]={status:"valide",at:Date.now(),values:v};
+     rec("pev",{dtc1:d1,dtc3:d3,"var":f(u*.9*k),vpo3:d3});rec("smi",{cpn1:c1,cpn4:Math.min(c1,f(gr*.55*k)),acc_tot:ac,acc_ass:Math.min(ac,f(u*.78*k)),cpon:f(u*.6*k),pf:f(fa*.08*k)});rec("palu",{suspects:sus,testes:te,positifs:po,graves:gv,deces:Math.round(gv*(c.id==="c5"?.7:.08*R()))})}});
+   S.camp=[{id:"k1",type:"campagne",nom:"Riposte rougeole",date:UI.year+"-05-12",centre:"c1",cible:900,vac:810,sp:12,sr:12},{id:"k2",type:"avancee",nom:"Stratégie avancée Taouyah",date:UI.year+"-07-03",centre:"c5",cible:300,vac:190,sp:8,sr:5}];
+   seedSurv();seedStock();seedSup();seedRH();save();UI.msg="Données de démonstration générées (janv.–oct. "+UI.year+", tous les modules).";render()};
+  g("p_reset").onclick=()=>{if(confirm("Effacer toutes les données locales ?")){try{localStorage.removeItem(KEY)}catch(e){}load();UI.msg="";render()}}}}
+/* ===== MODULE 5 : SURVEILLANCE (logique événementielle : notification → alerte → investigation) ===== */
+/* Règles d'alerte PROVISOIRES : "any" = 1 cas suffit ; "seuil" = n cas sur 7 jours dans un même centre. À remplacer par celles de la direction. */
+var MALADIES=[{id:"ebola",label:"Maladie à virus Ebola / FHV",rule:"any"},{id:"cholera",label:"Choléra",rule:"any"},{id:"pfa",label:"PFA (poliomyélite)",rule:"any"},{id:"fj",label:"Fièvre jaune",rule:"any"},{id:"lassa",label:"Fièvre de Lassa",rule:"any"},{id:"mpox",label:"Mpox",rule:"any"},{id:"tnn",label:"Tétanos néonatal",rule:"any"},
+ {id:"rougeole",label:"Rougeole",rule:"seuil",n:3},{id:"mening",label:"Méningite",rule:"seuil",n:3},{id:"diarsang",label:"Diarrhée sanglante",rule:"seuil",n:5}];
+var SURV={delai:2},STAT={encours:"En cours",cloturee:"Clôturée"},CLS={attente:"En attente",confirme:"Confirmé",ecarte:"Écarté"};
+function iso(d){return d.toISOString().slice(0,10)}
+function addD(x,n){var d=new Date(x+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return iso(d)}
+function diffD(a,b){return Math.round((new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/864e5)}
+function fd(x){return x?x.slice(8)+"/"+x.slice(5,7):""}
+function esc(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}
+var TODAY=iso(new Date());UI.ref=TODAY;UI.win=30;UI.sd="rougeole";
+function mal(id){return MALADIES.filter(m=>m.id===id)[0]}
+function cen(id){return S.centres.filter(c=>c.id===id)[0]||{nom:id}}
+function sNotifs(){var ids=scope().map(c=>c.id);return S.notif.filter(n=>ids.indexOf(n.centre)>=0&&n.date<=UI.ref)}
+/* Alertes calculées automatiquement depuis les notifications (délai de grâce de 7 jours entre deux alertes identiques) */
+function triggers(){var out=[],L=sNotifs().sort((a,b)=>a.date<b.date?-1:1);
+ MALADIES.forEach(M=>scope().forEach(c=>{var l=L.filter(n=>n.maladie===M.id&&n.centre===c.id),last=null;
+  l.forEach(n=>{var cnt=l.filter(k=>k.date<=n.date&&diffD(k.date,n.date)<7).reduce((a,k)=>a+k.cas,0);
+   if(cnt>=(M.rule==="any"?1:M.n)&&(last===null||diffD(last,n.date)>7)){last=n.date;out.push({key:M.id+"|"+c.id+"|"+n.date,m:M.id,c:c.id,date:n.date,cnt:cnt})}})}));
+ return out}
+function alerts(){return triggers().filter(t=>t.date>=addD(UI.ref,-(UI.win-1))).map(t=>{var i=S.inv.filter(x=>x.key===t.key)[0];t.inv=i;t.age=diffD(t.date,UI.ref);t.delai=i&&i.dateInvest?diffD(t.date,i.dateInvest):null;return t}).sort((a,b)=>a.date<b.date?1:-1)}
+function survStats(){var A=alerts(),den=A.filter(a=>a.inv||a.age>SURV.delai),ok=den.filter(a=>a.inv&&a.delai<=SURV.delai).length,dl=A.filter(a=>a.delai!==null).map(a=>a.delai);
+ return{A:A,n:A.length,late:A.filter(a=>!a.inv&&a.age>SURV.delai).length,enc:A.filter(a=>a.inv&&a.inv.statut!=="cloturee").length,pct:den.length?ok/den.length*100:null,moy:dl.length?dl.reduce((a,b)=>a+b,0)/dl.length:null}}
+function survCard(){var st=survStats(),k=st.pct===null?"":st.pct>=80?"ok":st.pct>=50?"wa":"ko",kc=(l,v,c,n)=>'<div class="kpi '+c+'"><small>'+l+'</small><b>'+v+'</b><span>'+n+'</span></div>';
+ return '<div class="card"><h2>Surveillance épidémiologique</h2><p class="note" style="margin:0 0 8px">Fenêtre de '+UI.win+' jours jusqu’au '+fd(UI.ref)+' (date de référence modifiable dans l’onglet Surveillance)</p><div class="kpis" style="margin:0">'+
+ kc("Alertes",st.n,"","sur la fenêtre")+kc("Non investiguées en retard",st.late,st.late?"ko":"ok","délai > "+SURV.delai+" j")+kc("Investigations en cours",st.enc,"","")+kc("Délai moyen d’investigation",st.moy===null?"–":st.moy.toFixed(1)+" j","","alerte → investigation")+kc("Investiguées ≤ "+SURV.delai+" j",st.pct===null?"–":st.pct.toFixed(0)+" %",k,"objectif ≥ 80 %")+'</div></div>'}
+function survAlerts(){return survStats().A.filter(a=>!a.inv).map(a=>({k:a.age>SURV.delai?"ko":"wa",t:"<b>Surveillance</b> : "+mal(a.m).label+" à "+cen(a.c).nom+" (alerte du "+fd(a.date)+") "+(a.age>SURV.delai?"non investiguée depuis "+a.age+" j":"à investiguer")}))}
+function badge(a){if(!a.inv)return '<span class="tag" style="'+(a.age>SURV.delai?"background:var(--kob);color:var(--ko)":"")+'">'+(a.age>SURV.delai?"Non investiguée ("+a.age+" j)":"À investiguer")+'</span>';
+ var late=a.delai>SURV.delai;return '<span class="tag v">'+STAT[a.inv.statut]+(a.inv.statut==="cloturee"?" · "+CLS[a.inv.classif]:"")+'</span>'+(late?' <span class="note">délai '+a.delai+' j</span>':"")}
+function epi(mid){var W=640,H=170,L=30,B=22,T=10,v=[];for(var k=11;k>=0;k--){var e=addD(UI.ref,-7*k),b=addD(e,-6);v.push(sNotifs().filter(n=>n.maladie===mid&&n.date>=b&&n.date<=e).reduce((a,n)=>a+n.cas,0))}
+ var mx=Math.max(4,Math.max.apply(null,v)),bw=(W-L-10)/12,r='<div class="sc"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;min-width:480px">';
+ [0,Math.round(mx/2),mx].forEach(g=>{var y=T+(H-T-B)*(1-g/mx);r+='<line x1="'+L+'" x2="'+(W-10)+'" y1="'+y+'" y2="'+y+'" stroke="#8884"/><text x="2" y="'+(y+3)+'">'+g+'</text>'});
+ v.forEach((c,i)=>{var h=(H-T-B)*c/mx,x=L+i*bw+4;r+='<rect x="'+x+'" y="'+(H-B-h)+'" width="'+(bw-8)+'" height="'+h+'" fill="#1d6fa5"/><text x="'+x+'" y="'+(H-8)+'">'+fd(addD(UI.ref,-7*(11-i)))+'</text>'});
+ return r+'</svg></div><p class="note">Cas notifiés par semaine glissante (se terminant à la date de référence).</p>'}
+function bulletin(){var st=survStats(),b=addD(UI.ref,-(UI.win-1)),NN=sNotifs().filter(n=>n.date>=b),t="BULLETIN DE SURVEILLANCE ÉPIDÉMIOLOGIQUE\nCommune : "+(UI.commune||"toutes")+" · Période : du "+fd(b)+" au "+fd(UI.ref)+" ("+UI.win+" jours)\n\nAlertes : "+st.n+" (non investiguées : "+st.A.filter(a=>!a.inv).length+", en retard : "+st.late+") · investigations en cours : "+st.enc+" · investiguées ≤ "+SURV.delai+" j : "+(st.pct===null?"–":st.pct.toFixed(0)+" %")+"\n\nMaladies notifiées :\n",any=false;
+ MALADIES.forEach(M=>{var l=NN.filter(n=>n.maladie===M.id);if(!l.length)return;any=true;var c=l.reduce((a,n)=>a+n.cas,0),d=l.reduce((a,n)=>a+n.deces,0);t+="- "+M.label+" : "+c+" cas, "+d+" décès\n"});
+ if(!any)t+="- Aucun cas notifié\n";t+="\nAlertes détaillées :\n";
+ st.A.forEach(a=>{t+="- "+fd(a.date)+" "+mal(a.m).label+" – "+cen(a.c).nom+" : "+a.cnt+" cas · "+(a.inv?STAT[a.inv.statut].toLowerCase()+(a.inv.statut==="cloturee"?" ("+CLS[a.inv.classif].toLowerCase()+")":""):"non investiguée ("+a.age+" j)")+"\n"});
+ return t}
+function vSurv(){var cm=[];S.centres.forEach(c=>{if(cm.indexOf(c.commune)<0)cm.push(c.commune)});
+ var st=survStats(),b=addD(UI.ref,-(UI.win-1)),NN=sNotifs().filter(n=>n.date>=b);
+ var h='<div class="card"><h2>Surveillance épidémiologique</h2><div class="row"><label>Date de référence<input type="date" id="sv_ref" value="'+UI.ref+'"></label><label>Fenêtre<select id="sv_win">'+[14,30,60,90].map(w=>'<option value="'+w+'"'+(UI.win===w?" selected":"")+'>'+w+' jours</option>').join("")+'</select></label><label>Commune<select id="sv_d"><option value="">Toutes</option>'+cm.map(d=>'<option'+(UI.commune===d?" selected":"")+'>'+d+'</option>').join("")+'</select></label></div><p class="note" style="margin:8px 0 0">Période : '+fd(b)+' → '+fd(UI.ref)+'. Règles d’alerte provisoires (« 1 cas » ou « n cas en 7 jours dans un même centre »), à remplacer par celles de la direction.</p></div>';
+ h+='<div class="card"><h2>Situation des maladies à potentiel épidémique</h2><div class="sc"><table><tr><th>Maladie</th><th>Règle d’alerte</th><th>Cas</th><th>Décès</th><th>Létalité</th><th>Centres</th><th>Alertes</th></tr>'+MALADIES.map(M=>{var l=NN.filter(n=>n.maladie===M.id),c=l.reduce((a,n)=>a+n.cas,0),d=l.reduce((a,n)=>a+n.deces,0),ce=[];l.forEach(n=>{if(ce.indexOf(n.centre)<0)ce.push(n.centre)});var na=st.A.filter(a=>a.m===M.id).length;
+  return '<tr><td>'+M.label+'</td><td>'+(M.rule==="any"?"1 cas":M.n+" cas / 7 j")+'</td><td>'+c+'</td><td>'+d+'</td><td>'+(c?(d/c*100).toFixed(0)+" %":"–")+'</td><td>'+ce.length+'</td><td class="t '+(na?"ko":"")+'">'+na+'</td></tr>'}).join("")+'</table></div></div>';
+ h+='<div class="card"><h2>Courbe épidémique</h2><label style="max-width:300px;margin-bottom:8px">Maladie<select id="sv_sd">'+MALADIES.map(M=>'<option value="'+M.id+'"'+(UI.sd===M.id?" selected":"")+'>'+M.label+'</option>').join("")+'</select></label>'+epi(UI.sd)+'</div>';
+ h+='<div class="card"><h2>Alertes épidémiques</h2>'+(st.A.length?'<div class="sc"><table><tr><th>Date</th><th>Maladie</th><th>Centre</th><th>Cas (7 j)</th><th style="text-align:left">Statut</th><th></th></tr>'+st.A.map(a=>'<tr><td>'+fd(a.date)+'</td><td>'+mal(a.m).label+'</td><td>'+cen(a.c).nom+'</td><td>'+a.cnt+'</td><td style="text-align:left">'+badge(a)+'</td><td>'+(a.inv?"":'<button class="b" data-open="'+a.key+'">Investiguer</button>')+'</td></tr>').join("")+'</table></div>':'<p class="note">Aucune alerte sur la fenêtre.</p>')+'</div>';
+ h+='<div class="card"><h2>Notifier des cas</h2><div class="row"><label>Date<input type="date" id="n_date" value="'+UI.ref+'"></label><label>Centre<select id="n_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+c.nom+'</option>').join("")+'</select></label><label>Maladie<select id="n_m">'+MALADIES.map(M=>'<option value="'+M.id+'">'+M.label+'</option>').join("")+'</select></label><label>Cas<input type="number" min="1" id="n_cas" value="1" style="width:70px"></label><label>Décès<input type="number" min="0" id="n_dec" value="0" style="width:70px"></label><button class="b" id="n_add">Notifier</button></div><div class="msg">'+UI.msg+'</div>'+
+ (S.notif.length?'<div class="sc" style="margin-top:8px"><table><tr><th>Date</th><th>Maladie</th><th>Centre</th><th>Cas</th><th>Décès</th><th></th></tr>'+S.notif.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,10).map(n=>'<tr><td>'+fd(n.date)+'</td><td>'+mal(n.maladie).label+'</td><td>'+cen(n.centre).nom+'</td><td>'+n.cas+'</td><td>'+n.deces+'</td><td><button class="b s" data-ndel="'+n.id+'">Suppr.</button></td></tr>').join("")+'</table></div><p class="note">10 dernières notifications.</p>':"")+'</div>';
+ h+='<div class="card"><h2>Rapport de surveillance</h2><textarea readonly style="width:100%;height:230px;font:12px/1.4 ui-monospace,monospace;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px">'+esc(bulletin())+'</textarea><p class="note">Sélectionnez le texte pour le copier. L’export PDF et Excel viendra avec le Module 9.</p></div>';
+ return h}
+function vInv(){var ids=scope().map(c=>c.id),L=S.inv.filter(i=>ids.indexOf(i.c)>=0).sort((a,b)=>a.dateAlerte<b.dateAlerte?1:-1),sel=(f,o,v)=>'<select data-f="'+f+'" data-id="@">'+Object.keys(o).map(k=>'<option value="'+k+'"'+(v===k?" selected":"")+'>'+o[k]+'</option>').join("")+'</select>';
+ var h='<div class="card"><h2>Suivi des investigations</h2><p class="note" style="margin:0 0 8px">Une investigation s’ouvre depuis une alerte (onglet Surveillance). Clôturer enregistre la date de clôture.</p>';
+ if(!L.length)return h+'<p class="note">Aucune investigation.</p></div>';
+ return h+'<div class="sc"><table><tr><th>Alerte</th><th>Délai</th><th>Statut</th><th>Classification</th><th>Responsable</th><th>Mesures prises</th><th></th></tr>'+L.map(i=>{var d=diffD(i.dateAlerte,i.dateInvest);
+  return '<tr><td>'+fd(i.dateAlerte)+' '+mal(i.m).label+' – '+cen(i.c).nom+'</td><td class="t '+(d>SURV.delai?"ko":"ok")+'">'+d+' j</td><td>'+sel("statut",STAT,i.statut).replace("@",i.id)+'</td><td>'+sel("classif",CLS,i.classif).replace("@",i.id)+'</td><td><input data-f="resp" data-id="'+i.id+'" value="'+esc(i.resp)+'" style="width:110px"></td><td><input data-f="mesures" data-id="'+i.id+'" value="'+esc(i.mesures)+'" style="width:170px"></td><td><button class="b" data-isave="'+i.id+'">Enregistrer</button></td></tr>'}).join("")+'</table></div><div class="msg">'+UI.msg+'</div></div>'}
+function survBind(g,on){
+ on("sv_ref",()=>{UI.ref=g("sv_ref").value||UI.ref;render()});on("sv_win",()=>{UI.win=+g("sv_win").value;render()});on("sv_d",()=>{UI.commune=g("sv_d").value;render()});on("sv_sd",()=>{UI.sd=g("sv_sd").value;render()});
+ if(g("n_add"))g("n_add").onclick=()=>{var n={id:"n"+Date.now(),date:g("n_date").value,centre:g("n_c").value,maladie:g("n_m").value,cas:+g("n_cas").value||0,deces:+g("n_dec").value||0};
+  if(!n.date||n.cas<1){UI.msg="Indiquez une date et au moins 1 cas.";render();return}if(n.deces>n.cas){UI.msg="Décès supérieurs aux cas : vérifiez.";render();return}
+  S.notif.push(n);save();UI.msg=n.date>UI.ref?"Notification enregistrée, mais postérieure à la date de référence (non comptée).":"Notification enregistrée.";render()};
+ [].forEach.call(document.querySelectorAll("[data-ndel]"),b=>{b.onclick=()=>{S.notif=S.notif.filter(n=>n.id!==b.dataset.ndel);save();render()}});
+ [].forEach.call(document.querySelectorAll("[data-open]"),b=>{b.onclick=()=>{var k=b.dataset.open,p=k.split("|");S.inv.push({id:"i"+Date.now(),key:k,m:p[0],c:p[1],dateAlerte:p[2],dateInvest:UI.ref,statut:"encours",classif:"attente",resp:"",mesures:""});save();UI.tab="inv";UI.msg="";render()}});
+ [].forEach.call(document.querySelectorAll("[data-isave]"),b=>{b.onclick=()=>{var id=b.dataset.isave,i=S.inv.filter(x=>x.id===id)[0],q=f=>document.querySelector('[data-f="'+f+'"][data-id="'+id+'"]');
+  i.statut=q("statut").value;i.classif=q("classif").value;i.resp=q("resp").value;i.mesures=q("mesures").value;i.dateCloture=i.statut==="cloturee"?(i.dateCloture||UI.ref):"";save();UI.msg="Investigation enregistrée.";render()}})}
+function seedSurv(){var T=TODAY,N=[],a=(d,c,m,cas,dec)=>N.push({id:"n"+N.length+"_"+Date.now(),date:addD(T,-d),centre:c,maladie:m,cas:cas,deces:dec||0});
+ for(var d=70;d>=0;d--)S.centres.forEach(c=>{if(Math.random()<.1)a(d,c.id,"diarsang",1);if(Math.random()<.04)a(d,c.id,"rougeole",1)});
+ a(5,"c5","rougeole",2);a(4,"c5","rougeole",1);a(1,"c5","rougeole",2);a(2,"c3","cholera",1);a(20,"c1","cholera",1);a(12,"c4","pfa",1);a(35,"c2","mening",2);a(34,"c2","mening",2);a(33,"c2","mening",1,1);
+ S.notif=N;S.inv=[];UI.ref=T;UI.commune="";
+ triggers().filter(t=>diffD(t.date,T)>=6).forEach((t,k)=>{var age=diffD(t.date,T),old=age>14;S.inv.push({id:"i"+k+"_"+Date.now(),key:t.key,m:t.m,c:t.c,dateAlerte:t.date,dateInvest:addD(t.date,t.m==="pfa"?4:1),statut:old?"cloturee":"encours",classif:old?(t.m==="cholera"?"ecarte":"confirme"):"attente",resp:"Équipe DCS",mesures:old?"Prélèvements, sensibilisation":"",dateCloture:old?addD(t.date,6):""})})}
+/* ===== MODULE 7 : STOCKS (logique de mouvements : entrées / sorties / pertes, lots et péremption) ===== */
+/* Seuils PROVISOIRES à remplacer par ceux de la direction : stock bas < 1 mois de consommation, surstock > 6 mois, péremption proche < 90 jours, disponibilité ≥ 90 % (alerte < 70 %). */
+var STOCK={min:1,max:6,perem:90,dispo:[90,70]};
+var CATS={medicament:"Médicaments",consommable:"Consommables",vaccin:"Vaccins",intrant:"Intrants"};
+function defProds(){return[{id:"cta",nom:"CTA (artéméther-luméfantrine)",cat:"medicament",unite:"cp"},{id:"amox",nom:"Amoxicilline 250 mg",cat:"medicament",unite:"cp"},{id:"para",nom:"Paracétamol 500 mg",cat:"medicament",unite:"cp"},{id:"sro",nom:"SRO",cat:"medicament",unite:"sachet"},{id:"zinc",nom:"Zinc 20 mg",cat:"medicament",unite:"cp"},
+ {id:"tdr",nom:"TDR paludisme",cat:"consommable",unite:"test"},{id:"gants",nom:"Gants d’examen",cat:"consommable",unite:"boîte"},
+ {id:"bcg",nom:"BCG",cat:"vaccin",unite:"dose"},{id:"dtc",nom:"DTC-HepB-Hib",cat:"vaccin",unite:"dose"},{id:"var",nom:"VAR",cat:"vaccin",unite:"dose"},{id:"vpo",nom:"VPO",cat:"vaccin",unite:"dose"},
+ {id:"sab",nom:"Seringues autobloquantes 0,05 ml",cat:"intrant",unite:"pièce"},{id:"bsec",nom:"Boîtes de sécurité",cat:"intrant",unite:"pièce"}]}
+UI.sc="all";
+function prod(id){return S.prod.filter(p=>p.id===id)[0]||{nom:id,unite:""}}
+/* Stock par lot à une date : les sorties consomment les lots non périmés, le plus proche de la péremption d'abord (FEFO) ; les pertes retirent d'abord les lots périmés */
+function simStock(c,p,asOf){var ev=S.mv.filter(m=>m.centre===c&&m.prod===p&&m.date<=asOf).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.type==="entree"?-1:1)),lots=[];
+ ev.forEach(m=>{if(m.type==="entree"){lots.push({lot:m.lot,exp:m.exp,q:m.qte});return}
+  var r=m.qte;lots.filter(l=>l.q>0&&(m.type==="perte"||l.exp>m.date)).sort((a,b)=>a.exp<b.exp?-1:1).forEach(l=>{var t=Math.min(l.q,r);l.q-=t;r-=t})});
+ return lots.filter(l=>l.q>0)}
+function stInfo(c,p){var lots=simStock(c,p,UI.ref),lim=addD(UI.ref,STOCK.perem),u=0,e=0,near=[],exp=[];
+ lots.forEach(l=>{if(l.exp>UI.ref){u+=l.q;if(l.exp<=lim)near.push(l)}else{e+=l.q;exp.push(l)}});
+ var cmm=S.mv.filter(m=>m.centre===c&&m.prod===p&&m.type==="sortie"&&m.date<=UI.ref&&m.date>addD(UI.ref,-90)).reduce((a,m)=>a+m.qte,0)/3,
+ tr=S.mv.some(m=>m.centre===c&&m.prod===p&&m.type==="entree"&&m.date<=UI.ref);
+ return{tr:tr,u:u,e:e,near:near,exp:exp,cmm:cmm,mois:cmm?u/cmm:null,st:!tr?"":u<=0?"ko":(cmm&&u/cmm<STOCK.min)?"wa":"ok"}}
+function stPairs(cat){var r=[];scope().forEach(c=>S.prod.filter(p=>cat==="all"||p.cat===cat).forEach(p=>{var i=stInfo(c.id,p.id);if(i.tr)r.push({c:c,p:p,i:i})}));return r}
+function stStats(cat){var r=stPairs(cat),n=r.length,rup=r.filter(x=>x.i.st==="ko").length;
+ return{r:r,n:n,rup:rup,bas:r.filter(x=>x.i.st==="wa").length,near:r.reduce((a,x)=>a+x.i.near.length,0),exp:r.reduce((a,x)=>a+x.i.exp.length,0),pct:n?(n-rup)/n*100:null}}
+function stKpis(s){var k=s.pct===null?"":s.pct>=STOCK.dispo[0]?"ok":s.pct>=STOCK.dispo[1]?"wa":"ko",kc=(l,v,c,n)=>'<div class="kpi '+c+'"><small>'+l+'</small><b>'+v+'</b><span>'+n+'</span></div>';
+ return '<div class="kpis" style="margin:0">'+kc("Disponibilité",s.pct===null?"–":s.pct.toFixed(0)+" %",k,"objectif ≥ "+STOCK.dispo[0]+" %")+kc("Ruptures",s.rup,s.rup?"ko":"ok","centre × produit")+kc("Stock bas",s.bas,s.bas?"wa":"ok","< "+STOCK.min+" mois")+kc("Lots proches péremption",s.near,s.near?"wa":"ok","< "+STOCK.perem+" jours")+kc("Lots périmés en stock",s.exp,s.exp?"ko":"ok","à retirer")+'</div>'}
+function stockCard(){var s=stStats("all");return '<div class="card"><h2>Stocks</h2><p class="note" style="margin:0 0 8px">Situation au '+fd(UI.ref)+' · '+s.n+' couples centre × produit suivis</p>'+stKpis(s)+'</div>'}
+function stockAlerts(){var A=[];stPairs("all").forEach(x=>{var n=x.c.nom,p=x.p.nom;
+ if(x.i.st==="ko")A.push({k:"ko",t:"<b>Stocks</b> : rupture de "+p+" à "+n});else if(x.i.st==="wa")A.push({k:"wa",t:"<b>Stocks</b> : stock bas de "+p+" à "+n+" ("+x.i.mois.toFixed(1)+" mois)"});
+ x.i.exp.forEach(l=>A.push({k:"ko",t:"<b>Stocks</b> : "+p+" périmé en stock à "+n+" (lot "+esc(l.lot)+", "+l.q+" "+x.p.unite+")"}));
+ x.i.near.forEach(l=>A.push({k:"wa",t:"<b>Stocks</b> : "+p+" à "+n+" périme le "+fd(l.exp)+" (lot "+esc(l.lot)+", "+l.q+" "+x.p.unite+")"}))});return A}
+function vStock(){var cm=[];S.centres.forEach(c=>{if(cm.indexOf(c.commune)<0)cm.push(c.commune)});var cs=scope(),P=S.prod.filter(p=>UI.sc==="all"||p.cat===UI.sc),s=stStats(UI.sc);
+ var h='<div class="card"><h2>Gestion des stocks</h2><div class="row"><label>Date de référence<input type="date" id="st_ref" value="'+UI.ref+'"></label><label>Commune<select id="st_d"><option value="">Toutes</option>'+cm.map(d=>'<option'+(UI.commune===d?" selected":"")+'>'+d+'</option>').join("")+'</select></label><label>Catégorie<select id="st_cat"><option value="all">Toutes</option>'+Object.keys(CATS).map(k=>'<option value="'+k+'"'+(UI.sc===k?" selected":"")+'>'+CATS[k]+'</option>').join("")+'</select></label></div><p class="note" style="margin:8px 0 10px">Consommation moyenne mensuelle = sorties des 90 derniers jours ÷ 3. Seuils provisoires, modifiables dans <code>STOCK</code>.</p>'+stKpis(s)+'</div>';
+ h+='<div class="card"><h2>Disponibilité des produits</h2><div class="sc"><table><tr><th>Produit</th>'+cs.map(c=>'<th>'+c.nom+'</th>').join("")+'</tr>'+P.map(p=>'<tr><td>'+p.nom+' <span class="note">('+CATS[p.cat]+')</span></td>'+cs.map(c=>{var i=stInfo(c.id,p.id);
+  return !i.tr?'<td class="note">–</td>':'<td class="t '+i.st+'">'+(i.u<=0?"Rupture":i.u+'<br><span class="note">'+(i.mois===null?"sans conso.":i.mois.toFixed(1)+" mois")+'</span>')+(i.e?'<br><span class="note" style="color:var(--ko)">⚠ '+i.e+' périmé(s)</span>':"")+'</td>'}).join("")+'</tr>').join("")+'</table></div><p class="note">Vert : au moins '+STOCK.min+' mois de stock · orange : stock bas · rouge : rupture. « – » : produit non suivi dans ce centre (aucune entrée).</p></div>';
+ var R=[];s.r.forEach(x=>{var b=x.c.nom,p=x.p.nom;if(x.i.st==="ko")R.push([0,"Rupture",p,b,"Stock utilisable nul"]);if(x.i.st==="wa")R.push([2,"Stock bas",p,b,x.i.u+" "+x.p.unite+" · "+x.i.mois.toFixed(1)+" mois"]);
+  x.i.exp.forEach(l=>R.push([1,"Périmé",p,b,"Lot "+esc(l.lot)+" · "+l.q+" "+x.p.unite+" · expiré le "+fd(l.exp)]));x.i.near.forEach(l=>R.push([3,"Péremption proche",p,b,"Lot "+esc(l.lot)+" · "+l.q+" "+x.p.unite+" · expire le "+fd(l.exp)]))});
+ R.sort((a,b)=>a[0]-b[0]);
+ h+='<div class="card"><h2>Alertes de rupture et de péremption</h2>'+(R.length?'<div class="sc"><table><tr><th>Alerte</th><th>Produit</th><th>Centre</th><th style="text-align:left">Détail</th></tr>'+R.map(r=>'<tr><td class="t '+(r[0]<2?"ko":"wa")+'">'+r[1]+'</td><td style="text-align:left">'+r[2]+'</td><td style="text-align:left">'+r[3]+'</td><td style="text-align:left">'+r[4]+'</td></tr>').join("")+'</table></div>':'<p class="note">Aucune alerte de stock.</p>')+'</div>';
+ return h}
+function vMouv(){var T=[["entree","Entrée (réception)"],["sortie","Sortie (consommation / distribution)"],["perte","Perte / retrait (péremption, casse)"]],lab={entree:"Entrée",sortie:"Sortie",perte:"Perte"};
+ var h='<div class="card"><h2>Nouveau mouvement de stock</h2><div class="row"><label>Date<input type="date" id="mv_date" value="'+UI.ref+'"></label><label>Centre<select id="mv_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+c.nom+'</option>').join("")+'</select></label>'+
+ '<label>Produit<select id="mv_p">'+Object.keys(CATS).map(k=>'<optgroup label="'+CATS[k]+'">'+S.prod.filter(p=>p.cat===k).map(p=>'<option value="'+p.id+'">'+p.nom+' ('+p.unite+')</option>').join("")+'</optgroup>').join("")+'</select></label>'+
+ '<label>Type<select id="mv_t">'+T.map(t=>'<option value="'+t[0]+'">'+t[1]+'</option>').join("")+'</select></label><label>Quantité<input type="number" min="1" id="mv_q" style="width:90px"></label>'+
+ '<label>N° de lot (entrée)<input id="mv_lot" style="width:110px"></label><label>Péremption (entrée)<input type="date" id="mv_exp"></label><label>Note<input id="mv_note" style="width:140px"></label><button class="b" id="mv_add">Enregistrer</button></div><div class="msg">'+UI.msg+'</div>'+
+ '<p class="note">Une sortie ne peut pas dépasser le stock utilisable (non périmé) à la date saisie. Les sorties consomment d’abord le lot qui périme en premier.</p>'+
+ (S.mv.length?'<div class="sc" style="margin-top:8px"><table><tr><th>Date</th><th>Type</th><th>Produit</th><th>Centre</th><th>Qté</th><th>Lot · péremption</th><th></th></tr>'+S.mv.slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,12).map(m=>'<tr><td>'+fd(m.date)+'</td><td>'+lab[m.type]+'</td><td>'+prod(m.prod).nom+'</td><td>'+cen(m.centre).nom+'</td><td>'+m.qte+'</td><td>'+(m.type==="entree"?esc(m.lot)+" · "+fd(m.exp):"")+'</td><td><button class="b s" data-mvdel="'+m.id+'">Suppr.</button></td></tr>').join("")+'</table></div><p class="note">12 derniers mouvements.</p>':"")+'</div>';
+ h+='<div class="card"><h2>Catalogue des produits</h2><div class="row"><label>Nom<input id="np_nom"></label><label>Catégorie<select id="np_cat">'+Object.keys(CATS).map(k=>'<option value="'+k+'">'+CATS[k]+'</option>').join("")+'</select></label><label>Unité<input id="np_u" value="boîte" style="width:90px"></label><button class="b" id="np_add">Ajouter le produit</button></div><p class="note">'+S.prod.length+' produits : '+S.prod.map(p=>p.nom).join(", ")+'.</p></div>';
+ return h}
+function stockBind(g,on){
+ on("st_ref",()=>{UI.ref=g("st_ref").value||UI.ref;render()});on("st_d",()=>{UI.commune=g("st_d").value;render()});on("st_cat",()=>{UI.sc=g("st_cat").value;render()});
+ if(g("mv_add"))g("mv_add").onclick=()=>{var m={id:"m"+Date.now(),date:g("mv_date").value,centre:g("mv_c").value,prod:g("mv_p").value,type:g("mv_t").value,qte:+g("mv_q").value||0,lot:g("mv_lot").value.trim(),exp:g("mv_exp").value,note:g("mv_note").value},er="";
+  if(!m.date||m.qte<1)er="Indiquez une date et une quantité d’au moins 1.";
+  else if(m.type==="entree"){if(!m.lot||!m.exp)er="Une entrée demande un numéro de lot et une date de péremption.";else if(m.exp<=m.date)er="Date de péremption antérieure à la réception : produit déjà périmé."}
+  else{var lots=simStock(m.centre,m.prod,m.date),av=lots.filter(l=>m.type==="perte"||l.exp>m.date).reduce((a,l)=>a+l.q,0);if(m.qte>av)er="Quantité supérieure au stock "+(m.type==="perte"?"disponible":"utilisable")+" à cette date ("+av+").";m.lot="";m.exp=""}
+  if(er){UI.msg=er;render();return}S.mv.push(m);save();UI.msg="Mouvement enregistré.";render()};
+ [].forEach.call(document.querySelectorAll("[data-mvdel]"),b=>{b.onclick=()=>{S.mv=S.mv.filter(m=>m.id!==b.dataset.mvdel);save();render()}});
+ if(g("np_add"))g("np_add").onclick=()=>{var n=g("np_nom").value.trim();if(!n){UI.msg="Indiquez un nom.";render();return}S.prod.push({id:"p"+Date.now(),nom:n,cat:g("np_cat").value,unite:g("np_u").value||"unité"});save();UI.msg="Produit ajouté.";render()}}
+function seedStock(){var T=TODAY,mv=[],id=0,R=()=>.8+Math.random()*.4,M=(d,c,p,t,q,lot,exp)=>mv.push({id:"m"+(id++)+"_"+Date.now(),date:addD(T,-d),centre:c,prod:p,type:t,qte:q,lot:lot||"",exp:exp||"",note:""}),
+ base={cta:300,amox:400,para:600,sro:250,zinc:250,tdr:500,gants:40,bcg:80,dtc:120,"var":100,vpo:130,sab:700,bsec:20},k={c1:1,c2:.9,c3:.8,c4:.7,c5:.6,c6:.85};
+ S.prod=defProds();S.mv=mv;UI.ref=T;UI.commune="";
+ S.centres.forEach(c=>S.prod.forEach(p=>{var m=Math.round(base[p.id]*(k[c.id]||.8)),e2=addD(T,300);if(c.id==="c1"&&p.id==="amox")e2=addD(T,30);if(c.id==="c4"&&p.id==="bcg")e2=addD(T,-10);
+  M(110,c.id,p.id,"entree",m*5,"L1-"+p.id,addD(T,270));M(40,c.id,p.id,"entree",m*3,"L2-"+p.id,e2);for(var w=15;w>=0;w--)M(w*7,c.id,p.id,"sortie",Math.max(1,Math.round(m/4.3*R())))}));
+ var drain=(c,p,d,leave)=>{var u=simStock(c,p,T).filter(l=>l.exp>T).reduce((a,l)=>a+l.q,0)-leave;if(u>0)M(d,c,p,"sortie",u)};
+ drain("c5","cta",2,0);drain("c6","tdr",1,0);drain("c3","sro",1,80);drain("c2","var",1,15)}
+/* ===== MODULE 6 : SUPERVISION (ciblage depuis les autres modules → grille → insuffisances → recommandations suivies) ===== */
+/* Grille et seuils PROVISOIRES : à remplacer par la grille officielle de la direction. Cotation : 2 conforme, 1 partiel, 0 non conforme. */
+var GRILLE=[
+{id:"org",t:"Organisation et gestion",i:[["org1","Registres à jour et bien tenus"],["org2","Rapport mensuel transmis à temps"],["org3","Données affichées et analysées (graphiques de suivi)"]]},
+{id:"pev",t:"PEV",i:[["pev1","Chaîne de froid fonctionnelle (température relevée 2 fois par jour)"],["pev2","Calendrier vaccinal respecté et registre de vaccination à jour"],["pev3","Stratégie avancée réalisée selon le micro-plan"]]},
+{id:"smi",t:"SMI",i:[["smi1","Consultations prénatales conformes au protocole"],["smi2","Partogramme utilisé pour chaque accouchement"],["smi3","Conseil et offre de planification familiale"]]},
+{id:"palu",t:"Paludisme",i:[["pal1","TDR réalisé avant tout traitement"],["pal2","Traitement des cas conforme au protocole"]]},
+{id:"surv",t:"Surveillance",i:[["sur1","Définitions de cas disponibles et connues"],["sur2","Alertes notifiées dans les 24 heures"]]},
+{id:"stk",t:"Stocks",i:[["stk1","Fiches de stock à jour et concordantes"],["stk2","Gestion FEFO appliquée, aucun produit périmé"]]},
+{id:"hyg",t:"Hygiène et infrastructures",i:[["hyg1","Eau, électricité et gestion des déchets fonctionnelles"],["hyg2","Équipements essentiels disponibles et en état"]]}];
+var SUP={bon:80,moy:60,delai0:30,delai1:60,recent:90},SCL={2:"Conforme",1:"Partiel",0:"Non conforme"},RST={afaire:"À faire",encours:"En cours",realisee:"Réalisée"};
+UI.gid=null;UI.vid=null;UI.rs="all";UI.rc="all";
+function gItems(){var r=[];GRILLE.forEach(g=>g.i.forEach(i=>r.push({s:g.id,id:i[0],l:i[1]})));return r}
+function supScore(sc){var a=gItems(),t=0;a.forEach(i=>t+=+sc[i.id]||0);return t/(2*a.length)*100}
+function secScore(sc,g){var t=0;g.i.forEach(i=>t+=+sc[i[0]]||0);return t/(2*g.i.length)*100}
+function sCls(v){return v===null?"":v>=SUP.bon?"ok":v>=SUP.moy?"wa":"ko"}
+function lastSup(c){return S.sup.filter(x=>x.centre===c&&x.statut==="realisee"&&x.dateReal<=UI.ref).sort((a,b)=>a.dateReal<b.dateReal?1:-1)[0]||null}
+function recoLate(r){return r.statut!=="realisee"&&r.echeance<UI.ref}
+function createRecos(s){gItems().forEach(i=>{var v=+s.scores[i.id];if(v<2)S.reco.push({id:"r_"+s.id+"_"+i.id,sup:s.id,centre:s.centre,item:i.id,texte:(v===0?"Corriger : ":"Améliorer : ")+i.l,resp:"Responsable du centre",echeance:addD(s.dateReal,v===0?SUP.delai0:SUP.delai1),statut:"afaire",dateReal:"",dateCrea:s.dateReal})})}
+/* Ciblage : score de priorité = 2 points par problème détecté dans les autres modules (indicateurs, stocks, alertes non investiguées, recommandations en retard) + 2 si pas de supervision récente */
+function ciblage(){var D=difficulties("all"),SP=stPairs("all"),SA=survStats().A;
+ return scope().map(c=>{var d=D.filter(x=>x.c.id===c.id)[0],nd=d?d.f.length:0,sp=SP.filter(x=>x.c.id===c.id&&(x.i.st==="ko"||x.i.exp.length)).length,sv=SA.filter(a=>a.c===c.id&&!a.inv&&a.age>SURV.delai).length,rl=S.reco.filter(r=>r.centre===c.id&&recoLate(r)).length,ls=lastSup(c.id),j=ls?diffD(ls.dateReal,UI.ref):null,mo=[];
+  if(nd)mo.push(nd+" problème(s) d’indicateurs");if(sp)mo.push(sp+" problème(s) de stock");if(sv)mo.push(sv+" alerte(s) non investiguée(s)");if(rl)mo.push(rl+" recommandation(s) en retard");
+  if(j===null)mo.push("jamais supervisé");else if(j>SUP.recent)mo.push("dernière supervision il y a "+j+" j");
+  return{c:c,sc:nd*2+sp*2+sv*2+rl*2+((j===null||j>SUP.recent)?2:0),mo:mo,j:j,planned:S.sup.filter(x=>x.centre===c.id&&x.statut==="planifiee")[0]}}).sort((a,b)=>b.sc-a.sc)}
+function supStats(){var cs=scope(),ids=cs.map(c=>c.id),ok=cs.filter(c=>{var l=lastSup(c.id);return l&&diffD(l.dateReal,UI.ref)<=SUP.recent}).length,last=cs.map(c=>lastSup(c.id)).filter(x=>x),R=S.reco.filter(r=>ids.indexOf(r.centre)>=0),done=R.filter(r=>r.statut==="realisee");
+ return{ok:cs.length?ok/cs.length*100:null,score:last.length?last.reduce((a,x)=>a+supScore(x.scores),0)/last.length:null,n:R.length,done:done.length,late:R.filter(recoLate).length,pct:R.length?done.length/R.length*100:null,ontime:done.length?done.filter(r=>r.dateReal<=r.echeance).length/done.length*100:null,pl:S.sup.filter(x=>ids.indexOf(x.centre)>=0&&x.statut==="planifiee"&&x.date<UI.ref).length}}
+function supKpis(t){var kc=(l,v,c,n)=>'<div class="kpi '+c+'"><small>'+l+'</small><b>'+v+'</b><span>'+n+'</span></div>',p=v=>v===null?"–":v.toFixed(0)+" %",k=v=>v===null?"":v>=80?"ok":v>=50?"wa":"ko";
+ return '<div class="kpis" style="margin:0">'+kc("Centres supervisés ≤ "+SUP.recent+" j",p(t.ok),k(t.ok),"objectif ≥ 80 %")+kc("Score moyen (dernière supervision)",p(t.score),sCls(t.score),"bon ≥ "+SUP.bon+" %")+kc("Recommandations réalisées",p(t.pct),k(t.pct),t.done+" sur "+t.n)+kc("Recommandations en retard",t.late,t.late?"ko":"ok","échéance dépassée")+kc("Supervisions planifiées en retard",t.pl,t.pl?"wa":"ok","")+'</div>'}
+function supCard(){return '<div class="card"><h2>Supervision</h2><p class="note" style="margin:0 0 8px">Situation au '+fd(UI.ref)+'</p>'+supKpis(supStats())+'</div>'}
+function supAlerts(){var A=[],ids=scope().map(c=>c.id);
+ scope().forEach(c=>{var n=S.reco.filter(r=>r.centre===c.id&&recoLate(r)).length;if(n)A.push({k:"ko",t:"<b>Supervision</b> : "+n+" recommandation(s) en retard à "+c.nom})});
+ S.sup.filter(x=>ids.indexOf(x.centre)>=0&&x.statut==="planifiee"&&x.date<UI.ref).forEach(x=>A.push({k:"wa",t:"<b>Supervision</b> : visite prévue le "+fd(x.date)+" non réalisée à "+cen(x.centre).nom}));
+ ciblage().filter(x=>x.sc>=6&&!x.planned&&(x.j===null||x.j>SUP.recent)).slice(0,3).forEach(x=>A.push({k:"wa",t:"<b>Supervision</b> : "+x.c.nom+" à superviser en priorité ("+x.mo.slice(0,2).join(", ")+")"}));
+ return A}
+function vSup(){if(UI.gid)return vGrille();var cm=[],h="",cs=scope();S.centres.forEach(c=>{if(cm.indexOf(c.commune)<0)cm.push(c.commune)});
+ var V=UI.vid&&S.sup.filter(x=>x.id===UI.vid)[0];
+ if(V&&V.statut==="realisee"){var ins=gItems().filter(i=>+V.scores[i.id]<2),sc=supScore(V.scores);
+  h+='<div class="card"><h2>Résultat de la supervision du '+fd(V.dateReal)+' · '+cen(V.centre).nom+'</h2><p style="margin:0 0 8px">Score global : <span class="t '+sCls(sc)+'">'+sc.toFixed(0)+' %</span></p><div class="sc"><table><tr><th>Domaine</th><th>Score</th></tr>'+GRILLE.map(g=>{var v=secScore(V.scores,g);return '<tr><td>'+g.t+'</td><td class="t '+sCls(v)+'">'+v.toFixed(0)+' %</td></tr>'}).join("")+'</table></div><h2 style="margin-top:12px">Insuffisances identifiées ('+ins.length+')</h2>'+(ins.length?'<ul style="margin:0;padding-left:18px">'+ins.map(i=>'<li>'+i.l+' <span class="note">('+SCL[V.scores[i.id]]+')</span></li>').join("")+'</ul><p class="note">Les recommandations correspondantes sont dans l’onglet Recommandations.</p>':'<p class="note">Aucune insuffisance.</p>')+(V.notes?'<p class="note">Observations : '+esc(V.notes)+'</p>':"")+'<button class="b s" id="v_close" style="margin-top:8px">Fermer</button></div>'}
+ h+='<div class="card"><h2>Supervision</h2><div class="row"><label>Date de référence<input type="date" id="sp_ref" value="'+UI.ref+'"></label><label>Commune<select id="sp_d"><option value="">Toutes</option>'+cm.map(d=>'<option'+(UI.commune===d?" selected":"")+'>'+d+'</option>').join("")+'</select></label></div><div style="margin-top:10px">'+supKpis(supStats())+'</div></div>';
+ h+='<div class="card"><h2>Centres à superviser en priorité</h2><p class="note" style="margin:0 0 8px">Calculé à partir des autres modules (indicateurs de la période du tableau de bord, stocks, surveillance, recommandations). Priorité haute ≥ 6 points, moyenne ≥ 3.</p><div class="sc"><table><tr><th>Centre</th><th>Priorité</th><th style="text-align:left">Motifs</th><th>Prochaine visite</th></tr>'+
+ ciblage().map(x=>'<tr><td>'+x.c.nom+'</td><td class="t '+(x.sc>=6?"ko":x.sc>=3?"wa":"ok")+'">'+(x.sc>=6?"Haute":x.sc>=3?"Moyenne":"Faible")+' ('+x.sc+')</td><td style="text-align:left;white-space:normal">'+(x.mo.join(" · ")||"Aucun problème détecté")+'</td><td>'+(x.planned?fd(x.planned.date):'<button class="b s" data-plan="'+x.c.id+'">Planifier</button>')+'</td></tr>').join("")+'</table></div></div>';
+ h+='<div class="card"><h2>Planifier une supervision</h2><div class="row"><label>Centre<select id="sp_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+c.nom+'</option>').join("")+'</select></label><label>Date prévue<input type="date" id="sp_date" value="'+addD(UI.ref,7)+'"></label><label>Superviseur<input id="sp_who" placeholder="Nom ou équipe"></label><button class="b" id="sp_add">Planifier</button></div><div class="msg">'+UI.msg+'</div></div>';
+ var L=S.sup.filter(x=>cs.some(c=>c.id===x.centre)).sort((a,b)=>a.date<b.date?1:-1);
+ h+='<div class="card"><h2>Supervisions</h2>'+(L.length?'<div class="sc"><table><tr><th>Date</th><th>Centre</th><th>Superviseur</th><th style="text-align:left">Statut</th><th></th></tr>'+L.map(x=>{var late=x.statut==="planifiee"&&x.date<UI.ref,sc=x.statut==="realisee"?supScore(x.scores):null;
+  return '<tr><td>'+fd(x.statut==="realisee"?x.dateReal:x.date)+'</td><td>'+cen(x.centre).nom+'</td><td>'+esc(x.sup)+'</td><td style="text-align:left">'+(x.statut==="realisee"?'<span class="tag v">Réalisée</span> <span class="t '+sCls(sc)+'">'+sc.toFixed(0)+' %</span>':'<span class="tag" style="'+(late?"background:var(--kob);color:var(--ko)":"")+'">'+(late?"En retard":"Planifiée")+'</span>')+'</td><td>'+(x.statut==="realisee"?'<button class="b s" data-view="'+x.id+'">Détail</button> ':'<button class="b" data-real="'+x.id+'">Réaliser</button> ')+'<button class="b s" data-sdel="'+x.id+'">Suppr.</button></td></tr>'}).join("")+'</table></div>':'<p class="note">Aucune supervision enregistrée.</p>')+'</div>';
+ return h}
+function vGrille(){var x=S.sup.filter(y=>y.id===UI.gid)[0],d=x.date<=UI.ref?x.date:UI.ref;
+ return '<div class="card"><h2>Grille de supervision · '+cen(x.centre).nom+'</h2><div class="row"><label>Date de la visite<input type="date" id="g_date" value="'+d+'"></label></div>'+
+ GRILLE.map(g=>'<h2 style="margin:14px 0 6px;font-size:14px;color:var(--pri)">'+g.t+'</h2>'+g.i.map(i=>'<div class="row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd)"><span style="flex:1;min-width:220px">'+i[1]+'</span><select data-it="'+i[0]+'"><option value="2">Conforme</option><option value="1">Partiel</option><option value="0">Non conforme</option></select></div>').join("")).join("")+
+ '<label style="margin-top:12px">Observations<input id="g_notes" style="width:100%"></label><div class="row" style="margin-top:12px"><button class="b" id="g_save">Enregistrer la supervision</button><button class="b s" id="g_cancel">Annuler</button></div><div class="msg">'+UI.msg+'</div><p class="note">Chaque item « partiel » ou « non conforme » génère une recommandation (échéance : '+SUP.delai0+' j pour non conforme, '+SUP.delai1+' j pour partiel).</p></div>'}
+function vReco(){var cs=scope(),ids=cs.map(c=>c.id),R=S.reco.filter(r=>ids.indexOf(r.centre)>=0&&(UI.rc==="all"||r.centre===UI.rc)&&(UI.rs==="all"||(UI.rs==="retard"?recoLate(r):r.statut===UI.rs))).sort((a,b)=>a.echeance<b.echeance?-1:1),t=supStats(),
+ sel=(f,o,v,id)=>'<select data-f="'+f+'" data-id="'+id+'">'+Object.keys(o).map(k=>'<option value="'+k+'"'+(v===k?" selected":"")+'>'+o[k]+'</option>').join("")+'</select>';
+ var h='<div class="card"><h2>Suivi des recommandations</h2><div class="row"><label>Centre<select id="rc_c"><option value="all">Tous</option>'+cs.map(c=>'<option value="'+c.id+'"'+(UI.rc===c.id?" selected":"")+'>'+c.nom+'</option>').join("")+'</select></label><label>Statut<select id="rc_s"><option value="all">Tous</option>'+Object.keys(RST).map(k=>'<option value="'+k+'"'+(UI.rs===k?" selected":"")+'>'+RST[k]+'</option>').join("")+'<option value="retard"'+(UI.rs==="retard"?" selected":"")+'>En retard</option></select></label></div><p class="note" style="margin:8px 0">'+t.n+' recommandation(s) · réalisées : '+(t.pct===null?"–":t.pct.toFixed(0)+" %")+' · dans les délais : '+(t.ontime===null?"–":t.ontime.toFixed(0)+" %")+' · en retard : '+t.late+'</p>'+
+ (R.length?'<div class="sc"><table><tr><th>Centre</th><th style="text-align:left">Recommandation</th><th>Responsable</th><th>Échéance</th><th>Statut</th><th>Réalisée le</th><th></th></tr>'+R.map(r=>'<tr><td>'+cen(r.centre).nom+'</td><td style="text-align:left;white-space:normal;min-width:200px">'+esc(r.texte)+'</td><td><input data-f="resp" data-id="'+r.id+'" value="'+esc(r.resp)+'" style="width:130px"></td><td><input type="date" data-f="ech" data-id="'+r.id+'" value="'+r.echeance+'"'+(recoLate(r)?' style="border-color:var(--ko)"':"")+'></td><td>'+sel("statut",RST,r.statut,r.id)+'</td><td>'+(r.dateReal?fd(r.dateReal):"")+'</td><td><button class="b" data-rsave="'+r.id+'">Enregistrer</button> <button class="b s" data-rdel="'+r.id+'">Suppr.</button></td></tr>').join("")+'</table></div>':'<p class="note">Aucune recommandation pour ce filtre.</p>')+'<div class="msg">'+UI.msg+'</div></div>';
+ h+='<div class="card"><h2>Ajouter une recommandation</h2><div class="row"><label>Centre<select id="rn_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+c.nom+'</option>').join("")+'</select></label><label>Recommandation<input id="rn_t" style="width:260px"></label><label>Responsable<input id="rn_r" style="width:140px"></label><label>Échéance<input type="date" id="rn_e" value="'+addD(UI.ref,30)+'"></label><button class="b" id="rn_add">Ajouter</button></div></div>';
+ return h}
+function supBind(g,on){
+ on("sp_ref",()=>{UI.ref=g("sp_ref").value||UI.ref;render()});on("sp_d",()=>{UI.commune=g("sp_d").value;render()});on("rc_c",()=>{UI.rc=g("rc_c").value;render()});on("rc_s",()=>{UI.rs=g("rc_s").value;render()});
+ if(g("v_close"))g("v_close").onclick=()=>{UI.vid=null;render()};
+ var each=(q,f)=>[].forEach.call(document.querySelectorAll(q),f),mkS=(c,d,w)=>({id:"s"+Date.now()+"_"+Math.round(Math.random()*999),centre:c,date:d,sup:w||"À désigner",statut:"planifiee",dateReal:"",scores:{},notes:""});
+ each("[data-plan]",b=>{b.onclick=()=>{S.sup.push(mkS(b.dataset.plan,addD(UI.ref,7)));save();UI.msg="";render()}});
+ if(g("sp_add"))g("sp_add").onclick=()=>{if(!g("sp_date").value){UI.msg="Indiquez une date.";render();return}S.sup.push(mkS(g("sp_c").value,g("sp_date").value,g("sp_who").value.trim()));save();UI.msg="Supervision planifiée.";render()};
+ each("[data-real]",b=>{b.onclick=()=>{UI.gid=b.dataset.real;UI.msg="";render()}});
+ each("[data-view]",b=>{b.onclick=()=>{UI.vid=b.dataset.view;render()}});
+ each("[data-sdel]",b=>{b.onclick=()=>{S.sup=S.sup.filter(x=>x.id!==b.dataset.sdel);S.reco=S.reco.filter(r=>r.sup!==b.dataset.sdel);save();render()}});
+ if(g("g_cancel"))g("g_cancel").onclick=()=>{UI.gid=null;render()};
+ if(g("g_save"))g("g_save").onclick=()=>{var x=S.sup.filter(y=>y.id===UI.gid)[0],sc={};each("[data-it]",e=>{sc[e.dataset.it]=+e.value});if(!g("g_date").value){UI.msg="Indiquez la date de la visite.";render();return}
+  x.scores=sc;x.dateReal=g("g_date").value;x.notes=g("g_notes").value;x.statut="realisee";createRecos(x);save();UI.vid=x.id;UI.gid=null;UI.msg="";render()};
+ each("[data-rsave]",b=>{b.onclick=()=>{var id=b.dataset.rsave,r=S.reco.filter(x=>x.id===id)[0],q=f=>document.querySelector('[data-f="'+f+'"][data-id="'+id+'"]');
+  r.resp=q("resp").value;r.echeance=q("ech").value||r.echeance;r.statut=q("statut").value;r.dateReal=r.statut==="realisee"?(r.dateReal||UI.ref):"";save();UI.msg="Recommandation enregistrée.";render()}});
+ each("[data-rdel]",b=>{b.onclick=()=>{S.reco=S.reco.filter(r=>r.id!==b.dataset.rdel);save();render()}});
+ if(g("rn_add"))g("rn_add").onclick=()=>{var t=g("rn_t").value.trim();if(!t||!g("rn_e").value){UI.msg="Indiquez la recommandation et l’échéance.";render();return}
+  S.reco.push({id:"r"+Date.now(),sup:"",centre:g("rn_c").value,item:"",texte:t,resp:g("rn_r").value||"À désigner",echeance:g("rn_e").value,statut:"afaire",dateReal:"",dateCrea:UI.ref});save();UI.msg="Recommandation ajoutée.";render()}}
+function seedSup(){var T=TODAY,q={c1:.85,c2:.7,c3:.45,c4:.65,c5:.35,c6:.8},id=0;S.sup=[];S.reco=[];UI.ref=T;UI.commune="";UI.gid=null;UI.vid=null;
+ var mk=(c,d,st)=>{var s={id:"s"+(id++)+"_"+Date.now(),centre:c,date:addD(T,-d),sup:"Équipe cadre DCS",statut:st,dateReal:st==="realisee"?addD(T,-d):"",scores:{},notes:""};
+  if(st==="realisee")gItems().forEach(i=>{var r=Math.random(),Q=q[c];s.scores[i.id]=r<Q?2:(r<Q+(1-Q)*.5?1:0)});S.sup.push(s);return s};
+ [["c3",120],["c2",60],["c1",30],["c4",75]].forEach(x=>{var s=mk(x[0],x[1],"realisee"),n=S.reco.length;createRecos(s);
+  S.reco.slice(n).forEach(r=>{if(r.echeance<T){if(Math.random()<.6){r.statut="realisee";var d=addD(r.echeance,Math.round(Math.random()*12-8));r.dateReal=d>T?T:d}else if(Math.random()<.4)r.statut="encours"}else if(Math.random()<.3)r.statut="encours"})});
+ mk("c5",5,"planifiee");mk("c6",-10,"planifiee")}
+/* ===== ÉTAPE 6 : MODULE 9 (RAPPORTS ET STATISTIQUES) + MODULE 1 COMPLET (classement des centres) ===== */
+var MOISL=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"],STL={ok:"Objectif atteint",wa:"Vigilance",ko:"Alerte","":"Suivi"};
+UI.rsub="mens";UI.rm=UI.m2;UI.rmode="mois";UI.rpg="pev";UI.hv=null;S.hist=S.hist||[];
+function withPeriod(m1,m2,f){var a=UI.m1,b=UI.m2;UI.m1=m1;UI.m2=m2;try{return f()}finally{UI.m1=a;UI.m2=b}}
+function repPeriod(){return UI.rmode==="mois"?[UI.rm,UI.rm]:[UI.m1,UI.m2]}
+function perLabel(m1,m2,y){y=y||UI.year;return m1===m2?MOISL[m1-1]+" "+y:MOISL[m1-1]+" à "+MOISL[m2-1]+" "+y}
+function shortL(i){return i.label.replace("Couverture ","").replace(/ \(.*\)/,"")}
+function objTxt(i){return i.dir==="info"?"–":(i.dir==="up"?"≥ ":"≤ ")+i.target+(i.mult===1000?" ‰":" %")}
+function pScore(P,a){var n=0,p=0;INDS(P.id).forEach(i=>{var s=status(i,compute(i,a));if(!s)return;n++;p+=s==="ok"?1:s==="wa"?.5:0});return n?p/n*100:null}
+function scCls(v){return v===null?"":v>=80?"ok":v>=50?"wa":"ko"}
+/* --- Module 1 complet : classement des centres, tous programmes confondus --- */
+function scoreCentre(c){var p=0,n=0,g=0,wa=0,ko=0,rc=0,ex=0,E=UI.m2-UI.m1+1;
+ PROGS.forEach(P=>{var a=aggregate(P.id,[c],UI.year,UI.m1,UI.m2,UI.onlyVal);INDS(P.id).forEach(i=>{var s=status(i,compute(i,a));if(!s)return;n++;if(s==="ok"){g++;p+=1}else if(s==="wa"){wa++;p+=.5}else ko++});rc+=received(P.id,c);ex+=E});
+ return{c:c,sc:n?p/n*100:null,g:g,wa:wa,ko:ko,comp:ex?rc/ex*100:null}}
+function clsCard(){var R=scope().map(scoreCentre).sort((a,b)=>(b.sc===null?-1:b.sc)-(a.sc===null?-1:a.sc));
+ return '<div class="card"><h2>Classement des centres de santé</h2><p class="note" style="margin:0 0 8px">Score global = part des indicateurs colorés qui atteignent l’objectif (vert = 1 point, orange = 0,5 point, rouge = 0), tous programmes confondus, sur la période choisie.</p><div class="sc"><table><tr><th>Rang · Centre</th><th>Score</th><th>Verts</th><th>Orange</th><th>Rouges</th><th>Rapports validés</th></tr>'+
+ R.map((x,i)=>'<tr><td>'+(i+1)+'. '+esc(x.c.nom)+'</td><td class="t '+scCls(x.sc)+'">'+(x.sc===null?"–":x.sc.toFixed(0)+" %")+'</td><td>'+x.g+'</td><td>'+x.wa+'</td><td>'+x.ko+'</td><td class="t '+scCls(x.comp)+'">'+(x.comp===null?"–":x.comp.toFixed(0)+" %")+'</td></tr>').join("")+'</table></div></div>'}
+function vDash(){var h=vDash5(),k=h.indexOf('<div class="card"><h2>Évolution mensuelle');return k<0?h+clsCard():h.slice(0,k)+clsCard()+h.slice(k)}
+/* --- Alertes de tous les modules --- */
+function allAlerts(){var A=difficulties("all").map(x=>({k:x.f.length>=2?"ko":"wa",t:"<b>"+esc(x.c.nom)+"</b> : "+x.f.join(" · ")})),cp=campStats(campScope());
+ survAlerts().forEach(x=>A.push(x));stockAlerts().forEach(x=>A.push(x));supAlerts().forEach(x=>A.push(x));rhAlerts().forEach(x=>A.push(x));
+ if(cp.cible&&cp.vac/cp.cible*100<80)A.push({k:"wa",t:"<b>Campagnes / AV</b> : réalisation "+(cp.vac/cp.cible*100).toFixed(0)+" % de la cible (< 80)"});
+ return A.sort((x,y)=>(x.k==="ko"?0:1)-(y.k==="ko"?0:1))}
+/* --- Blocs du rapport --- */
+function progCard(P,cs,m1,m2){var I=INDS(P.id),a=aggregate(P.id,cs,UI.year,m1,m2,UI.onlyVal),pa=(m1===m2&&m1>1)?aggregate(P.id,cs,UI.year,m1-1,m1-1,UI.onlyVal):null,hp=pa&&pa.n>0;
+ return '<div class="card"><h2>Synthèse '+P.label+'</h2><p class="note" style="margin:0 0 8px">'+a.n+' rapport(s) mensuel(s) pris en compte</p><div class="sc"><table><tr><th>Indicateur</th><th>Valeur</th><th>Objectif</th><th>Statut</th>'+(hp?'<th>Mois précédent</th><th>Écart</th>':'')+'</tr>'+
+ I.map(i=>{var v=compute(i,a),s=status(i,v),pv=hp?compute(i,pa):null,d=(v!==null&&pv!==null)?v-pv:null;
+  return '<tr><td>'+i.label+'</td><td class="t '+s+'">'+fmt(i,v)+'</td><td>'+objTxt(i)+'</td><td>'+STL[s]+'</td>'+(hp?'<td>'+fmt(i,pv)+'</td><td>'+(d===null?"–":(d>0?"+":"")+d.toFixed(1)+(i.mult===1000?" ‰":" pt"))+'</td>':'')+'</tr>'}).join("")+'</table></div></div>'}
+function cmpCard(P,cs,m1,m2){var I=INDS(P.id),at=aggregate(P.id,cs,UI.year,m1,m2,UI.onlyVal),cell=(a)=>I.map(i=>{var v=compute(i,a);return '<td class="t '+status(i,v)+'">'+fmt(i,v)+'</td>'}).join(""),sc=(a)=>{var v=pScore(P,a);return '<td class="t '+scCls(v)+'">'+(v===null?"–":v.toFixed(0)+" %")+'</td>'};
+ return '<div class="card"><h2>Comparaison entre centres · '+P.label+'</h2><div class="sc"><table><tr><th>Centre</th>'+I.map(i=>'<th title="'+esc(i.label)+'">'+esc(shortL(i))+'</th>').join("")+'<th>Score</th></tr>'+
+ cs.map(c=>{var a=aggregate(P.id,[c],UI.year,m1,m2,UI.onlyVal);return '<tr><td>'+esc(c.nom)+'</td>'+cell(a)+sc(a)+'</tr>'}).join("")+'<tr style="font-weight:700"><td>Commune</td>'+cell(at)+sc(at)+'</tr></table></div><p class="note">Score = part des indicateurs colorés qui atteignent l’objectif (orange = demi-point).</p></div>'}
+function campPeriod(m1,m2){return campScope().filter(k=>{var m=+k.date.slice(5,7);return m>=m1&&m<=m2})}
+function reportHTML(m1,m2){return withPeriod(m1,m2,function(){var cs=scope(),E=m2-m1+1,A=allAlerts(),K=campPeriod(m1,m2),ct=campStats(K),h='';
+ h+='<div class="card"><h2 style="font-size:19px">'+(m1===m2?"Rapport mensuel d’activités":"Rapport d’activités")+' · '+perLabel(m1,m2)+'</h2><p class="note" style="margin:0">Direction communale de la santé · '+esc(UI.commune||"ensemble des communes")+' · '+cs.length+' centre(s) de santé · édité le '+new Date().toLocaleDateString("fr-FR")+' · '+(UI.onlyVal?"données validées seulement":"données validées et brouillons")+'</p></div>';
+ h+='<div class="card"><h2>Alertes et problèmes prioritaires ('+A.length+')</h2>'+(A.length?A.map(x=>'<div class="al '+x.k+'">'+x.t+'</div>').join(""):'<p class="note">Aucune alerte.</p>')+'</div>';
+ h+='<div class="card"><h2>Complétude des rapports mensuels validés</h2><div class="sc"><table><tr><th>Centre</th>'+PROGS.map(P=>'<th>'+P.label+'</th>').join("")+'</tr>'+cs.map(c=>'<tr><td>'+esc(c.nom)+'</td>'+PROGS.map(P=>{var r=received(P.id,c);return '<td class="t '+(r>=E?"ok":r?"wa":"ko")+'">'+r+' / '+E+'</td>'}).join("")+'</tr>').join("")+'</table></div></div>';
+ PROGS.forEach(P=>h+=progCard(P,cs,m1,m2));
+ PROGS.forEach(P=>h+=cmpCard(P,cs,m1,m2));
+ h+='<div class="card"><h2>Campagnes et activités avancées</h2>'+(K.length?'<div class="sc"><table><tr><th>Date</th><th>Type</th><th>Intitulé</th><th>Centre</th><th>Cible</th><th>Vaccinés</th><th>Couverture</th></tr>'+K.map(k=>{var p=k.cible?k.vac/k.cible*100:null;return '<tr><td>'+fd(k.date)+'</td><td>'+(k.type==="campagne"?"Campagne":"Activité avancée")+'</td><td>'+esc(k.nom)+'</td><td>'+esc(cen(k.centre).nom)+'</td><td>'+k.cible+'</td><td>'+k.vac+'</td><td class="t '+(p===null?"":p>=95?"ok":p>=80?"wa":"ko")+'">'+(p===null?"–":p.toFixed(0)+" %")+'</td></tr>'}).join("")+'<tr style="font-weight:700"><td colspan="4">Total</td><td>'+ct.cible+'</td><td>'+ct.vac+'</td><td>'+(ct.cible?(ct.vac/ct.cible*100).toFixed(0)+" %":"–")+'</td></tr></table></div>':'<p class="note">Aucune activité enregistrée sur la période.</p>')+'</div>';
+ h+='<p class="note">Surveillance, stocks, supervision, ressources humaines et infrastructures : situation à la date de référence ('+fd(UI.ref)+'), indépendante de la période du rapport.</p>'+survCard()+stockCard()+supCard()+rhReportCard();
+ return h})}
+/* --- Interface du module 9 --- */
+function vRap(){var T=[["mens","Rapport mensuel"],["synth","Synthèses et comparaisons"],["exp","Exports Excel"],["hist","Historique"]],p=repPeriod(),h='<div class="card np"><div class="row">'+T.map(t=>'<button class="b'+(UI.rsub===t[0]?'':' s')+'" data-rs="'+t[0]+'">'+t[1]+'</button>').join("")+'</div></div>';
+ if(UI.rsub==="mens"){h+='<div class="np">'+filters()+'</div><div class="card np"><div class="row"><label>Période du rapport<select id="r_mode"><option value="mois"'+(UI.rmode==="mois"?" selected":"")+'>Un mois</option><option value="per"'+(UI.rmode==="per"?" selected":"")+'>Période des filtres ci-dessus</option></select></label>'+
+  (UI.rmode==="mois"?'<label>Mois<select id="r_m">'+MOISL.map((m,i)=>'<option value="'+(i+1)+'"'+(UI.rm===i+1?" selected":"")+'>'+m+'</option>').join("")+'</select></label>':"")+
+  '<button class="b" id="r_arch">Archiver dans l’historique</button><button class="b s" id="r_print">Imprimer / enregistrer en PDF</button></div><div class="msg">'+UI.msg+'</div></div><div id="rep">'+reportHTML(p[0],p[1])+'</div>'}
+ else if(UI.rsub==="synth"){var P=PROG(UI.rpg),cs=scope(),ms=[];for(var m=UI.m1;m<=UI.m2;m++)ms.push(m);
+  h+=filters()+'<div class="card np"><div class="row">'+progSel("r_pg",UI.rpg)+'</div></div><div class="card"><h2>Synthèse mensuelle · '+P.label+' · '+UI.year+'</h2><div class="sc"><table><tr><th>Indicateur</th>'+ms.map(m=>'<th>'+MOIS[m-1]+'</th>').join("")+'<th>Période</th></tr>'+
+  INDS(P.id).map(i=>{var c=m=>{var v=compute(i,aggregate(P.id,cs,UI.year,m,m,UI.onlyVal));return '<td class="t '+status(i,v)+'">'+fmt(i,v)+'</td>'},v=compute(i,aggregate(P.id,cs,UI.year,UI.m1,UI.m2,UI.onlyVal));
+   return '<tr><td>'+i.label+'</td>'+ms.map(c).join("")+'<td class="t '+status(i,v)+'" style="font-weight:700">'+fmt(i,v)+'</td></tr>'}).join("")+'</table></div></div>'+progCard(P,cs,UI.m1,UI.m2)+cmpCard(P,cs,UI.m1,UI.m2)}
+ else if(UI.rsub==="exp"){h+=filters()+'<div class="card"><h2>Exports vers Excel</h2><p class="note">Fichiers CSV (séparateur point-virgule) qui s’ouvrent directement dans Excel. Période : <b>'+perLabel(p[0],p[1])+'</b> (réglable dans l’onglet Rapport mensuel) · Commune : '+esc(UI.commune||"toutes")+'.</p><div class="row" style="margin-top:8px"><button class="b" id="x_ind">Indicateurs par centre</button><button class="b" id="x_sai">Saisies mensuelles de l’année</button><button class="b" id="x_al">Alertes</button><button class="b" id="x_rec">Recommandations de supervision</button><button class="b" id="x_rh">Personnel</button><button class="b" id="x_eq">Équipements et infrastructures</button></div></div>'}
+ else{var L=S.hist.slice().sort((a,b)=>b.at-a.at);
+  if(UI.hv){var x=S.hist.filter(y=>y.id===UI.hv)[0];if(x)h+='<div class="card np"><div class="row"><button class="b s" data-rs="hist">Retour à l’historique</button><button class="b" id="r_print">Imprimer / enregistrer en PDF</button></div><p class="note" style="margin:8px 0 0">Rapport archivé le '+new Date(x.at).toLocaleDateString("fr-FR")+'.</p></div><div id="rep">'+x.html+'</div>';else UI.hv=null}
+  if(!UI.hv)h+='<div class="card"><h2>Historique des rapports</h2>'+(L.length?'<div class="sc"><table><tr><th>Archivé le</th><th>Période</th><th>Commune</th><th></th></tr>'+L.map(x=>'<tr><td>'+new Date(x.at).toLocaleDateString("fr-FR")+'</td><td>'+perLabel(x.m1,x.m2,x.y)+'</td><td>'+esc(x.commune||"toutes")+'</td><td><button class="b s" data-hv="'+x.id+'">Consulter</button> <button class="b s" data-hd="'+x.id+'">Supprimer</button></td></tr>').join("")+'</table></div>':'<p class="note">Aucun rapport archivé. Archivez un rapport depuis l’onglet Rapport mensuel.</p>')+'</div>'}
+ return h}
+function dl(name,rows){var csv="\ufeff"+rows.map(r=>r.map(x=>'"'+String(x===null||x===undefined?"":x).replace(/"/g,'""')+'"').join(";")).join("\r\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+var nf=v=>v===null?"":v.toFixed(1).replace(".",",");
+function rapBind(g,on){if(UI.tab!=="rap")return;var q=(s,f)=>[].forEach.call(document.querySelectorAll(s),f),b=(i,f)=>{if(g(i))g(i).onclick=f},p=repPeriod(),cs=scope(),ids=cs.map(c=>c.id);
+ q("[data-rs]",x=>x.onclick=()=>{UI.rsub=x.dataset.rs;UI.msg="";UI.hv=null;render()});
+ on("r_m",()=>{UI.rm=+g("r_m").value;UI.msg="";render()});on("r_mode",()=>{UI.rmode=g("r_mode").value;UI.msg="";render()});on("r_pg",()=>{UI.rpg=g("r_pg").value;render()});
+ b("r_print",()=>window.print());
+ b("r_arch",()=>{S.hist.push({id:"h"+Date.now(),at:Date.now(),y:UI.year,m1:p[0],m2:p[1],commune:UI.commune,html:reportHTML(p[0],p[1])});save();UI.msg="Rapport de "+perLabel(p[0],p[1])+" archivé dans l’historique.";render()});
+ q("[data-hv]",x=>x.onclick=()=>{UI.hv=x.dataset.hv;render()});
+ q("[data-hd]",x=>x.onclick=()=>{if(confirm("Supprimer ce rapport archivé ?")){S.hist=S.hist.filter(y=>y.id!==x.dataset.hd);save();render()}});
+ b("x_ind",()=>{var R=[["Centre","Programme","Indicateur","Valeur","Objectif","Statut"]];
+  PROGS.forEach(P=>{cs.concat([{nom:"Commune",all:1}]).forEach(c=>{var a=aggregate(P.id,c.all?cs:[c],UI.year,p[0],p[1],UI.onlyVal);INDS(P.id).forEach(i=>{var v=compute(i,a);R.push([c.nom,P.label,i.label,nf(v),objTxt(i),STL[status(i,v)]])})})});
+  dl("indicateurs_"+UI.year+"_"+p[0]+"-"+p[1]+".csv",R)});
+ b("x_sai",()=>{var R=[["Programme","Centre","Mois","Statut","Champ","Valeur"]];
+  Object.keys(S.rec).sort().forEach(k=>{var x=k.split("|"),r=S.rec[k];if(ids.indexOf(x[1])<0||x[2].slice(0,4)!=UI.year)return;PROG(x[0]).form.forEach(f=>R.push([PROG(x[0]).label,cen(x[1]).nom,x[2],r.status==="valide"?"validé":"brouillon",f[1],r.values[f[0]]]))});
+  dl("saisies_"+UI.year+".csv",R)});
+ b("x_al",()=>{var R=[["Niveau","Alerte"]];allAlerts().forEach(a=>R.push([a.k==="ko"?"Rouge":"Orange",a.t.replace(/<[^>]+>/g,"")]));dl("alertes_"+UI.ref+".csv",R)});
+ b("x_rec",()=>{var L={afaire:"À faire",encours:"En cours",realisee:"Réalisée"},R=[["Centre","Recommandation","Responsable","Échéance","Statut","En retard","Date de réalisation"]];
+  S.reco.filter(r=>ids.indexOf(r.centre)>=0).forEach(r=>R.push([cen(r.centre).nom,r.texte,r.resp,r.echeance,L[r.statut]||r.statut,recoLate(r)?"Oui":"Non",r.dateReal]));dl("recommandations.csv",R)})}
+
+/* ===== MODULE 8 COMPLET : RESSOURCES HUMAINES ET INFRASTRUCTURES (personnel, qualifications, équipements, infrastructures) ===== */
+/* NORMES PROVISOIRES : effectif minimal en poste par centre de santé. À remplacer par les normes de la direction. */
+var NORMES=[["medecin","Médecin",1],["infirmier","Infirmier",2],["sagefemme","Sage-femme",1],["labo","Technicien de laboratoire",1],["pharma","Gestionnaire de pharmacie",1]];
+var FONCTIONS=NORMES.map(n=>[n[0],n[1]]).concat([["ats","Agent technique de santé"],["asc","Agent de santé communautaire"],["appui","Personnel d’appui"]]);
+var QUALIFS=["Docteur en médecine","Infirmier d’État","Infirmier breveté","Sage-femme d’État","Agent technique de santé","Technicien supérieur de laboratoire","Pharmacien ou préparateur","Autre"];
+var STAFF_ST={poste:"En poste",absent:"Absent (congé, mission)",parti:"Parti"};
+/* Équipements : [id, libellé, critique (1 = une panne ou une absence déclenche une alerte rouge)] */
+var EQUIP=[["frigo","Réfrigérateur PEV (chaîne de froid)",1],["isoth","Boîtes isothermes et accumulateurs",1],["table","Table d’accouchement",0],["kitacc","Kits d’accouchement stériles",0],["micro","Microscope",0],["balance","Balance pèse-bébé",0],["tensio","Tensiomètre",0],["autoclave","Stérilisateur ou autoclave",0],["ordi","Ordinateur ou téléphone de saisie",0]];
+var ETAT=[["","Non évalué"],["bon","Bon état"],["panne","En panne"],["absent","Absent"]];
+/* Infrastructures : chaque option = [valeur, libellé, score 0-2] */
+var OUI3=[["oui","Oui",2],["part","Partiellement",1],["non","Non",0]];
+var INFRA=[{id:"eau",l:"Eau potable",o:[["oui","Disponible",2],["part","Partielle",1],["non","Absente",0]]},{id:"elec",l:"Électricité",o:[["cont","Continue",2],["part","Partielle (solaire, groupe)",1],["non","Aucune",0]]},
+ {id:"latr",l:"Latrines fonctionnelles",o:OUI3},{id:"dech",l:"Gestion des déchets biomédicaux",o:OUI3},{id:"accs",l:"Salle d’accouchement fonctionnelle",o:[["oui","Oui",2],["non","Non",0]]},{id:"bat",l:"État du bâtiment",o:[["bon","Bon",2],["moy","À réhabiliter",1],["deg","Dégradé",0]]}];
+UI.rhsub="vue";UI.rhc="all";
+function staffOf(cid){return S.rh.filter(x=>x.centre===cid&&x.statut==="poste")}
+function rhC(c){var st=staffOf(c.id),miss=[];
+ NORMES.forEach(n=>{var k=st.filter(x=>x.fonction===n[0]).length;if(k<n[2])miss.push({f:n[1],k:k,min:n[2]})});
+ var eq=EQUIP.map(e=>({e:e,s:(S.eq[c.id+"|"+e[0]]||{}).etat||""})),ev=eq.filter(x=>x.s).length,ok=eq.filter(x=>x.s==="bon").length,bad=eq.filter(x=>x.s==="panne"||x.s==="absent");
+ var inf=S.infra[c.id]||{},isc=0,ie=0,ib=[];
+ INFRA.forEach(it=>{var v=inf[it.id];if(!v)return;var o=it.o.filter(y=>y[0]===v)[0];if(!o)return;ie++;isc+=o[2];if(o[2]===0)ib.push(it.l.toLowerCase()+" : "+o[1].toLowerCase())});
+ return{c:c,tot:st.length,miss:miss,ev:ev,ok:ok,bad:bad,ib:ib,ie:ie,isc:ie?isc/(ie*2)*100:null}}
+function rhAll(){return scope().map(rhC)}
+function rhAlerts(){var A=[];rhAll().forEach(r=>{var n=esc(r.c.nom);
+ if(r.miss.length)A.push({k:r.miss.length>=2?"ko":"wa",t:"<b>RH</b> : "+n+" sous la norme de personnel ("+r.miss.map(m=>m.f.toLowerCase()+" "+m.k+"/"+m.min).join(", ")+")"});
+ var crit=r.bad.filter(x=>x.e[2]),oth=r.bad.filter(x=>!x.e[2]);
+ if(crit.length)A.push({k:"ko",t:"<b>Équipements</b> : "+n+" — "+crit.map(x=>x.e[1].toLowerCase()+" ("+(x.s==="panne"?"en panne":"absent")+")").join(", ")});
+ if(oth.length)A.push({k:"wa",t:"<b>Équipements</b> : "+n+" — "+oth.map(x=>x.e[1].toLowerCase()+" ("+(x.s==="panne"?"en panne":"absent")+")").join(", ")});
+ if(r.ib.length)A.push({k:r.ib.length>=2?"ko":"wa",t:"<b>Infrastructures</b> : "+n+" — "+r.ib.join(", ")})});return A}
+function rhKpis(R){var kc=(l,v,c,n)=>'<div class="kpi '+c+'"><small>'+l+'</small><b>'+v+'</b><span>'+n+'</span></div>',N=R.length,
+ staff=R.reduce((a,r)=>a+r.tot,0),norm=R.filter(r=>r.tot>0&&!r.miss.length).length,ev=R.reduce((a,r)=>a+r.ev,0),ok=R.reduce((a,r)=>a+r.ok,0),crit=R.reduce((a,r)=>a+r.bad.filter(x=>x.e[2]).length,0),
+ is=R.filter(r=>r.isc!==null),im=is.length?is.reduce((a,r)=>a+r.isc,0)/is.length:null,pn=N?norm/N*100:null,pe=ev?ok/ev*100:null,k=v=>v===null?"":v>=80?"ok":v>=50?"wa":"ko";
+ return '<div class="kpis" style="margin:0">'+kc("Personnel en poste",staff,"","tous centres")+kc("Centres aux normes de personnel",pn===null?"–":pn.toFixed(0)+" %",k(pn),norm+" sur "+N)+kc("Équipements en bon état",pe===null?"–":pe.toFixed(0)+" %",k(pe),ok+" sur "+ev+" évalués")+kc("Équipements critiques défaillants",crit,crit?"ko":"ok","chaîne de froid")+kc("Score des infrastructures",im===null?"–":im.toFixed(0)+" %",k(im),is.length+" centre(s) évalué(s)")+'</div>'}
+function rhCard(){return '<div class="card"><h2>Ressources humaines et infrastructures</h2><p class="note" style="margin:0 0 8px">Situation actuelle, saisie dans l’onglet RH &amp; infrastructures</p>'+rhKpis(rhAll())+'</div>'}
+function rhTable(R){var k=v=>v===null?"":v>=80?"ok":v>=50?"wa":"ko";
+ return '<div class="sc"><table><tr><th>Centre</th><th>Personnel en poste</th><th style="text-align:left">Écarts aux normes</th><th>Équipements en bon état</th><th>Défaillants</th><th>Infrastructures</th></tr>'+R.map(r=>'<tr><td>'+esc(r.c.nom)+'</td><td>'+r.tot+'</td><td class="t '+(r.tot===0?"ko":r.miss.length?(r.miss.length>=2?"ko":"wa"):"ok")+'" style="text-align:left;white-space:normal">'+(r.tot===0?"Aucun personnel saisi":r.miss.length?r.miss.map(m=>m.f+" "+m.k+"/"+m.min).join(", "):"Conforme")+'</td><td class="t '+k(r.ev?r.ok/r.ev*100:null)+'">'+(r.ev?r.ok+" / "+r.ev:"–")+'</td><td class="t '+(r.bad.length?"ko":"")+'">'+r.bad.length+'</td><td class="t '+k(r.isc)+'">'+(r.isc===null?"–":r.isc.toFixed(0)+" %")+'</td></tr>').join("")+'</table></div>'}
+function rhReportCard(){var R=rhAll();return '<div class="card"><h2>Ressources humaines et infrastructures</h2>'+rhKpis(R)+'<div style="height:10px"></div>'+rhTable(R)+'<p class="note">Normes de personnel provisoires : '+NORMES.map(n=>n[2]+" "+n[1].toLowerCase()).join(", ")+'.</p></div>'}
+function opts(L,v){return L.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?" selected":"")+'>'+o[1]+'</option>').join("")}
+/* --- Interface --- */
+function vRh(){var T=[["vue","Vue d’ensemble"],["pers","Personnel"],["eq","Équipements"],["inf","Infrastructures"]],cs=scope(),R=rhAll(),
+ h='<div class="card"><div class="row">'+T.map(t=>'<button class="b'+(UI.rhsub===t[0]?'':' s')+'" data-rhs="'+t[0]+'">'+t[1]+'</button>').join("")+'</div></div>';
+ if(UI.rhsub==="vue"){var A=rhAlerts();h+='<div class="card"><h2>Situation des ressources humaines et des infrastructures</h2>'+rhKpis(R)+'</div><div class="card"><h2>Par centre de santé</h2>'+rhTable(R)+'</div><div class="card"><h2>Alertes ('+A.length+')</h2>'+(A.length?A.map(x=>'<div class="al '+x.k+'">'+x.t+'</div>').join(""):'<p class="note">Aucune alerte.</p>')+'</div>'}
+ else if(UI.rhsub==="pers"){var L=S.rh.filter(x=>(UI.rhc==="all"||x.centre===UI.rhc)&&(UI.rhc!=="all"||scope().some(c=>c.id===x.centre))).sort((a,b)=>cen(a.centre).nom<cen(b.centre).nom?-1:1);
+  h+='<div class="card"><h2>Ajouter un agent</h2><div class="row"><label>Centre<select id="rh_c">'+S.centres.map(c=>'<option value="'+c.id+'">'+esc(c.nom)+'</option>').join("")+'</select></label><label>Nom<input id="rh_n" placeholder="Nom et prénom"></label><label>Fonction<select id="rh_f">'+opts(FONCTIONS,"")+'</select></label><label>Qualification<select id="rh_q">'+QUALIFS.map(q=>'<option>'+q+'</option>').join("")+'</select></label><button class="b" id="rh_add">Ajouter</button></div><div class="msg">'+UI.msg+'</div></div>'+
+  '<div class="card"><h2>Effectifs en poste et normes</h2><div class="sc"><table><tr><th>Centre</th>'+NORMES.map(n=>'<th>'+n[1]+' (min. '+n[2]+')</th>').join("")+'<th>Autres</th></tr>'+R.map(r=>{var st=staffOf(r.c.id);return '<tr><td>'+esc(r.c.nom)+'</td>'+NORMES.map(n=>{var k=st.filter(x=>x.fonction===n[0]).length;return '<td class="t '+(k>=n[2]?"ok":k?"wa":"ko")+'">'+k+'</td>'}).join("")+'<td>'+st.filter(x=>!NORMES.some(n=>n[0]===x.fonction)).length+'</td></tr>'}).join("")+'</table></div></div>'+
+  '<div class="card"><h2>Liste du personnel ('+L.length+')</h2><div class="row" style="margin-bottom:8px"><label>Centre<select id="rh_fc"><option value="all">Tous</option>'+S.centres.map(c=>'<option value="'+c.id+'"'+(UI.rhc===c.id?" selected":"")+'>'+esc(c.nom)+'</option>').join("")+'</select></label></div>'+
+  (L.length?'<div class="sc"><table><tr><th>Centre</th><th style="text-align:left">Nom</th><th style="text-align:left">Fonction</th><th style="text-align:left">Qualification</th><th>Statut</th><th></th></tr>'+L.map(x=>'<tr><td>'+esc(cen(x.centre).nom)+'</td><td style="text-align:left">'+esc(x.nom)+'</td><td style="text-align:left">'+esc((FONCTIONS.filter(f=>f[0]===x.fonction)[0]||[0,x.fonction])[1])+'</td><td style="text-align:left">'+esc(x.qual)+'</td><td><select class="rhst" data-id="'+x.id+'">'+opts(Object.keys(STAFF_ST).map(k=>[k,STAFF_ST[k]]),x.statut)+'</select></td><td><button class="b s" data-rhdel="'+x.id+'">Suppr.</button></td></tr>').join("")+'</table></div>':'<p class="note">Aucun agent enregistré.</p>')+'</div>'}
+ else if(UI.rhsub==="eq"){h+='<div class="card"><h2>État des équipements par centre</h2><p class="note" style="margin:0 0 8px">Une panne ou une absence de matériel critique (chaîne de froid) déclenche une alerte rouge.</p><div class="sc"><table><tr><th>Centre</th>'+EQUIP.map(e=>'<th style="white-space:normal;min-width:110px" title="'+esc(e[1])+'">'+esc(e[1])+(e[2]?" *":"")+'</th>').join("")+'</tr>'+cs.map(c=>'<tr><td>'+esc(c.nom)+'</td>'+EQUIP.map(e=>{var s=(S.eq[c.id+"|"+e[0]]||{}).etat||"";return '<td><select class="eqs" data-c="'+c.id+'" data-e="'+e[0]+'" style="'+(s==="panne"||s==="absent"?"color:var(--ko);font-weight:600":s==="bon"?"color:var(--ok)":"")+'">'+opts(ETAT,s)+'</select></td>'}).join("")+'</tr>').join("")+'</table></div><p class="note">* matériel critique</p></div>'}
+ else{h+='<div class="card"><h2>État des infrastructures par centre</h2><div class="sc"><table><tr><th>Centre</th>'+INFRA.map(i=>'<th style="white-space:normal;min-width:130px">'+i.l+'</th>').join("")+'<th>Score</th></tr>'+R.map(r=>{var inf=S.infra[r.c.id]||{};return '<tr><td>'+esc(r.c.nom)+'</td>'+INFRA.map(i=>{var v=inf[i.id]||"",o=i.o.filter(y=>y[0]===v)[0];return '<td><select class="infs" data-c="'+r.c.id+'" data-i="'+i.id+'" style="'+(o&&o[2]===0?"color:var(--ko);font-weight:600":o&&o[2]===2?"color:var(--ok)":"")+'"><option value="">Non évalué</option>'+opts(i.o,v)+'</select></td>'}).join("")+'<td class="t '+(r.isc===null?"":r.isc>=80?"ok":r.isc>=50?"wa":"ko")+'">'+(r.isc===null?"–":r.isc.toFixed(0)+" %")+'</td></tr>'}).join("")+'</table></div></div>'}
+ return h}
+function rhBind(g,on){var q=(s,f)=>[].forEach.call(document.querySelectorAll(s),f);
+ if(UI.tab==="rap"&&UI.rsub==="exp"){var dd=(i,f)=>{if(g(i))g(i).onclick=f},ids=scope().map(c=>c.id);
+  dd("x_rh",()=>{var R=[["Centre","Nom","Fonction","Qualification","Statut"]];S.rh.filter(x=>ids.indexOf(x.centre)>=0).forEach(x=>R.push([cen(x.centre).nom,x.nom,(FONCTIONS.filter(f=>f[0]===x.fonction)[0]||[0,x.fonction])[1],x.qual,STAFF_ST[x.statut]]));dl("personnel.csv",R)});
+  dd("x_eq",()=>{var R=[["Centre","Rubrique","Élément","État"]];scope().forEach(c=>{EQUIP.forEach(e=>R.push([c.nom,"Équipement",e[1],ETAT.filter(y=>y[0]===((S.eq[c.id+"|"+e[0]]||{}).etat||""))[0][1]]));INFRA.forEach(i=>{var v=(S.infra[c.id]||{})[i.id],o=i.o.filter(y=>y[0]===v)[0];R.push([c.nom,"Infrastructure",i.l,o?o[1]:"Non évalué"])})});dl("equipements_infrastructures.csv",R)})}
+ if(UI.tab!=="rh")return;
+ q("[data-rhs]",x=>x.onclick=()=>{UI.rhsub=x.dataset.rhs;UI.msg="";render()});
+ on("rh_fc",()=>{UI.rhc=g("rh_fc").value;render()});
+ if(g("rh_add"))g("rh_add").onclick=()=>{var n=g("rh_n").value.trim(),f=g("rh_f").value;if(!n||!f){UI.msg="Indiquez le nom et la fonction.";render();return}
+  S.rh.push({id:"a"+Date.now()+Math.round(Math.random()*99),centre:g("rh_c").value,nom:n,fonction:f,qual:g("rh_q").value,statut:"poste"});save();UI.msg="Agent ajouté.";render()};
+ q(".rhst",x=>x.onchange=()=>{S.rh.filter(y=>y.id===x.dataset.id)[0].statut=x.value;save();render()});
+ q("[data-rhdel]",x=>x.onclick=()=>{if(confirm("Supprimer cet agent ?")){S.rh=S.rh.filter(y=>y.id!==x.dataset.rhdel);save();render()}});
+ q(".eqs",x=>x.onchange=()=>{S.eq[x.dataset.c+"|"+x.dataset.e]={etat:x.value};save();render()});
+ q(".infs",x=>x.onchange=()=>{S.infra[x.dataset.c]=S.infra[x.dataset.c]||{};S.infra[x.dataset.c][x.dataset.i]=x.value;save();render()})}
+function seedRH(){S.rh=[];S.eq={};S.infra={};var id=0,Q={medecin:"Docteur en médecine",infirmier:"Infirmier d’État",sagefemme:"Sage-femme d’État",labo:"Technicien supérieur de laboratoire",pharma:"Pharmacien ou préparateur",ats:"Agent technique de santé",appui:"Autre"},
+ add=(c,f)=>S.rh.push({id:"a"+(id++)+"_"+Date.now(),centre:c,nom:"Agent démo "+id,fonction:f,qual:Q[f],statut:"poste"});
+ var manque={c3:["sagefemme","labo"],c5:["medecin","sagefemme","pharma"],c2:["labo"]};
+ S.centres.forEach(c=>{NORMES.forEach(n=>{var k=(manque[c.id]||[]).indexOf(n[0])>=0?0:n[2]+(n[0]==="infirmier"&&c.id==="c1"?1:0);for(var i=0;i<k;i++)add(c.id,n[0])});add(c.id,"ats");add(c.id,"appui");
+  EQUIP.forEach(e=>{var s="bon";if(c.id==="c5"&&e[0]==="frigo")s="panne";else if(c.id==="c3"&&e[0]==="table")s="absent";else if(c.id==="c4"&&e[0]==="micro")s="panne";else if(c.id==="c6"&&e[0]==="ordi")s="";S.eq[c.id+"|"+e[0]]={etat:s}});
+  var P={c1:{eau:"oui",elec:"cont",latr:"oui",dech:"oui",accs:"oui",bat:"bon"},c2:{eau:"oui",elec:"part",latr:"oui",dech:"part",accs:"oui",bat:"bon"},c3:{eau:"part",elec:"part",latr:"part",dech:"non",accs:"oui",bat:"moy"},c4:{eau:"oui",elec:"cont",latr:"oui",dech:"oui",accs:"oui",bat:"moy"},c5:{eau:"non",elec:"non",latr:"part",dech:"non",accs:"non",bat:"deg"},c6:{eau:"oui",elec:"part",latr:"oui",dech:"oui",accs:"oui",bat:"bon"}};
+  S.infra[c.id]=P[c.id]||{eau:"oui",elec:"part",latr:"oui",dech:"part",accs:"oui",bat:"moy"}})}
+
+render();
+</script>
+
+<button id="btn-install" type="button">Installer l’application</button>
+<script>
+/* PWA : enregistrement du service worker et bouton d’installation */
+if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){
+  window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
+}
+(function(){var ev=null,b=document.getElementById("btn-install");
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();ev=e;if(!window.matchMedia("(display-mode: standalone)").matches)b.style.display="block"});
+  b.onclick=function(){if(!ev)return;ev.prompt();ev.userChoice.then(function(){ev=null;b.style.display="none"})};
+  window.addEventListener("appinstalled",function(){b.style.display="none"});
+})();
+</script>
+</body>
+</html>
